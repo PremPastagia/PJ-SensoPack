@@ -9,7 +9,7 @@ import sys
 # Configuration
 SERIAL_PORT = 'COM12'
 BAUD_RATE = 9600
-FIREBASE_DB_URL = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.firebaseio.com/')
+FIREBASE_DB_URL = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.asia-southeast1.firebasedatabase.app/')
 
 print("=========================================")
 print("  SensoPack Arduino -> Firebase Bridge   ")

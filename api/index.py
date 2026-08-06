@@ -30,7 +30,7 @@ except Exception as e:
 # Initialize Firebase
 try:
     cred_json = os.environ.get('FIREBASE_CREDENTIALS')
-    db_url = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.firebaseio.com/')
+    db_url = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.asia-southeast1.firebasedatabase.app/')
     
     if not firebase_admin._apps:
         if cred_json:
