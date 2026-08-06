@@ -76,12 +76,12 @@ def predict(req: PredictRequest):
             raise HTTPException(status_code=404, detail="No sensor data found in Firebase. Is the Arduino bridge running?")
             
         ammonia = float(sensor_data.get('ammonia_ppm', 0.0))
-        temp = float(sensor_data.get('temp_c', 4.0))
-        humidity = float(sensor_data.get('humidity', 85.0))
+        temp = sensor_data.get('temp_c', 25.0)
+        ammonia = sensor_data.get('ammonia_ppm', 0.0)
+        humidity = sensor_data.get('humidity', 75.0)
         
-        # 2. Prepare features for ML Model
-        # Expected order: Ammonia_ppm, pH_Level, Temperature_C, Storage_Time_hrs
-        features = np.array([[ammonia, req.ph_level, temp, req.storage_time_hrs]])
+        # Model expects: ['ammonia_ppm' 'ph_level' 'temperature_c' 'storage_time_hrs' 'humidity_pct']
+        features = np.array([[ammonia, req.ph_level, temp, req.storage_time_hrs, humidity]])
         
         # 3. Predict
         prediction = model.predict(features)[0]
