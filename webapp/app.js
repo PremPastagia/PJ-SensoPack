@@ -62,10 +62,20 @@ const dom = {
   // Main layout
   mainView:       document.getElementById("main-view"),
 
-  // Toasts
+  // Toasts & Logs
   errorToast:     document.getElementById("error-toast"),
   infoToast:      document.getElementById("info-toast"),
+  logContent:     document.getElementById("system-log-content"),
 };
+
+function logSystem(msg, type = "info") {
+  const line = document.createElement("div");
+  line.className = `log-line log-line--${type}`;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  dom.logContent.appendChild(line);
+  dom.logContent.scrollTop = dom.logContent.scrollHeight;
+  console.log(`[SYS] ${msg}`);
+}
 
 function resetScanner() {
   dom.mainView.classList.remove("hidden");
@@ -318,6 +328,7 @@ async function runScan() {
   btn.disabled = true;
   btn.textContent = "⏳ Scanning...";
   dom.cameraPanel.classList.add("scan-active");
+  logSystem("Scan initiated...");
 
   dom.scanSummary.classList.add("hidden");
   dom.resultPanel.classList.add("hidden");
@@ -326,15 +337,22 @@ async function runScan() {
     let qrResult, biofilmResult, storageHrs;
 
     if (DemoMode.enabled) {
+      logSystem("Demo Mode: Generating dummy scan data...");
       await sleep(1200);
       const sim = DemoMode.generateScanData();
       qrResult = sim.qr;
       biofilmResult = sim.biofilm;
       storageHrs = sim.storageHrs;
+      logSystem("Demo Mode: Data generated successfully.", "success");
     } else {
-      if (!Camera.ready) { showError("Camera not available"); return; }
+      if (!Camera.ready) { 
+        showError("Camera not available"); 
+        logSystem("Camera not available. Aborting.", "error");
+        return; 
+      }
       
       btn.textContent = "⏳ Scanning Package...";
+      logSystem("Searching for QR code...");
       let imageData = null;
       qrResult = null;
       
@@ -348,6 +366,7 @@ async function runScan() {
 
       if (!qrResult) { 
         showInfo("No QR code detected. Using default package info.");
+        logSystem("QR code NOT found in 3 seconds. Using fallbacks.", "error");
         qrResult = {
           data: {
             batch_id: "UNKNOWN-BATCH",
@@ -357,6 +376,8 @@ async function runScan() {
           },
           location: null
         };
+      } else {
+        logSystem(`QR Code decoded successfully. Data: ${qrResult.raw}`, "success");
       }
 
       storageHrs = QRDecoder.computeStorageHours(qrResult.data.packaging_time);
@@ -367,11 +388,14 @@ async function runScan() {
       biofilmResult = BiofilmAnalyzer.analyze(imageData, qrResult.location);
       if (!biofilmResult) {
         showInfo("No biofilm color detected. Using default pH (7.0).");
+        logSystem("Biofilm color NOT detected. Using default pH.", "error");
         biofilmResult = {
           rgb: { r: 150, g: 150, b: 150 },
           hsv: { h: 0, s: 0, v: 50 },
           ph: 7.0
         };
+      } else {
+        logSystem(`Biofilm analyzed. Estimated pH: ${biofilmResult.ph}`, "success");
       }
     }
 
@@ -381,6 +405,7 @@ async function runScan() {
     };
 
     console.log("Visual Payload to API:", payload);
+    logSystem(`Sending Request to Vercel API: ${API_URL}`);
 
     btn.textContent = "🧠 Fetching Firebase & Predicting...";
     const response = await fetch(API_URL, {
@@ -391,10 +416,11 @@ async function runScan() {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || `Server returned ${response.status}`);
+      throw new Error(err.detail || `Server returned HTTP ${response.status}`);
     }
 
     const result = await response.json();
+    logSystem("Received successful response from Vercel API!", "success");
     
     // Hide Camera and show panels
     dom.mainView.classList.add("hidden");
@@ -409,6 +435,7 @@ async function runScan() {
 
   } catch (err) {
     console.error("Scan error:", err);
+    logSystem(`CRITICAL ERROR: ${err.message}`, "error");
     showError(err.message);
   } finally {
     btn.disabled = false;
