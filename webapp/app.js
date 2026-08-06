@@ -62,20 +62,10 @@ const dom = {
   // Main layout
   mainView:       document.getElementById("main-view"),
 
-  // Toasts & Logs
+  // Toasts
   errorToast:     document.getElementById("error-toast"),
   infoToast:      document.getElementById("info-toast"),
-  logContent:     document.getElementById("system-log-content"),
 };
-
-function logSystem(msg, type = "info") {
-  const line = document.createElement("div");
-  line.className = `log-line log-line--${type}`;
-  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  dom.logContent.appendChild(line);
-  dom.logContent.scrollTop = dom.logContent.scrollHeight;
-  console.log(`[SYS] ${msg}`);
-}
 
 function resetScanner() {
   dom.mainView.classList.remove("hidden");
@@ -286,38 +276,7 @@ const BiofilmAnalyzer = {
 // ═══════════════════════════════════════════════════════════
 // MODULE 4: Demo Mode
 // ═══════════════════════════════════════════════════════════
-const DemoMode = {
-  enabled: false,
-
-  toggle(on) {
-    this.enabled = on;
-    if (on) {
-      dom.scanBtn.disabled = false;
-      showInfo("Demo mode active — visual scanning simulated");
-    }
-  },
-
-  generateScanData() {
-    return {
-      qr: {
-        data: {
-          batch_id: "DEMO-77291",
-          product_id: "Vannamei (20-30)",
-          packaging_time: new Date(Date.now() - 48 * 3600000).toISOString(), // 48 hrs ago
-          initial_temp_c: 4.5,
-          location: "Kochi, Kerala",
-          notes: "Demo scan"
-        }
-      },
-      biofilm: {
-        rgb: { r: 120, g: 60, b: 180 },
-        hsv: { h: 270, s: 66, v: 70 },
-        ph: 7.15
-      },
-      storageHrs: 48.5
-    };
-  }
-};
+// Removed DemoMode object
 
 
 // ═══════════════════════════════════════════════════════════
@@ -328,7 +287,6 @@ async function runScan() {
   btn.disabled = true;
   btn.textContent = "⏳ Scanning...";
   dom.cameraPanel.classList.add("scan-active");
-  logSystem("Scan initiated...");
 
   dom.scanSummary.classList.add("hidden");
   dom.resultPanel.classList.add("hidden");
@@ -336,24 +294,12 @@ async function runScan() {
   try {
     let qrResult, biofilmResult, storageHrs;
 
-    if (DemoMode.enabled) {
-      logSystem("Demo Mode: Generating dummy scan data...");
-      await sleep(1200);
-      const sim = DemoMode.generateScanData();
-      qrResult = sim.qr;
-      biofilmResult = sim.biofilm;
-      storageHrs = sim.storageHrs;
-      logSystem("Demo Mode: Data generated successfully.", "success");
-    } else {
-      if (!Camera.ready) { 
-        showError("Camera not available"); 
-        logSystem("Camera not available. Aborting.", "error");
-        return; 
-      }
-      
-      btn.textContent = "⏳ Scanning Package...";
-      logSystem("Searching for QR code...");
-      let imageData = null;
+    if (!Camera.ready) { 
+      throw new Error("Camera not available"); 
+    }
+    
+    btn.textContent = "⏳ Scanning Package...";
+    let imageData = null;
       qrResult = null;
       
       const startTime = Date.now();
@@ -365,39 +311,20 @@ async function runScan() {
       }
 
       if (!qrResult) { 
-        showInfo("No QR code detected. Using default package info.");
-        logSystem("QR code NOT found in 3 seconds. Using fallbacks.", "error");
-        qrResult = {
-          data: {
-            batch_id: "UNKNOWN-BATCH",
-            product_id: "Vannamei Shrimp",
-            packaging_time: new Date(Date.now() - 24 * 3600000).toISOString(),
-            notes: "No QR Scanned - Default Info"
-          },
-          location: null
-        };
-      } else {
-        logSystem(`QR Code decoded successfully. Data: ${qrResult.raw}`, "success");
+        throw new Error("No QR code detected — ensure it is in focus and well-lit");
       }
 
-      storageHrs = QRDecoder.computeStorageHours(qrResult.data.packaging_time);
+      if (qrResult.data.packaging_time) {
+        storageHrs = QRDecoder.computeStorageHours(qrResult.data.packaging_time);
+      }
       if (storageHrs === null || storageHrs === undefined) {
-        storageHrs = 24.0;
+        throw new Error("QR code missing packaging_time field");
       }
 
       biofilmResult = BiofilmAnalyzer.analyze(imageData, qrResult.location);
       if (!biofilmResult) {
-        showInfo("No biofilm color detected. Using default pH (7.0).");
-        logSystem("Biofilm color NOT detected. Using default pH.", "error");
-        biofilmResult = {
-          rgb: { r: 150, g: 150, b: 150 },
-          hsv: { h: 0, s: 0, v: 50 },
-          ph: 7.0
-        };
-      } else {
-        logSystem(`Biofilm analyzed. Estimated pH: ${biofilmResult.ph}`, "success");
+        throw new Error("Could not detect biofilm color — ensure the indicator is visible");
       }
-    }
 
     const payload = {
       ph_level: biofilmResult.ph,
@@ -405,7 +332,6 @@ async function runScan() {
     };
 
     console.log("Visual Payload to API:", payload);
-    logSystem(`Sending Request to Vercel API: ${API_URL}`);
 
     btn.textContent = "🧠 Fetching Firebase & Predicting...";
     const response = await fetch(API_URL, {
@@ -420,7 +346,6 @@ async function runScan() {
     }
 
     const result = await response.json();
-    logSystem("Received successful response from Vercel API!", "success");
     
     // Hide Camera and show panels
     dom.mainView.classList.add("hidden");
@@ -435,7 +360,6 @@ async function runScan() {
 
   } catch (err) {
     console.error("Scan error:", err);
-    logSystem(`CRITICAL ERROR: ${err.message}`, "error");
     showError(err.message);
   } finally {
     btn.disabled = false;

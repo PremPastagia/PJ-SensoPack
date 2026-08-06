@@ -209,22 +209,6 @@ body {
   text-transform: uppercase; letter-spacing: 1px;
   font-weight: 700;
 }
-.system-status {
-  margin-top: 1.5rem; padding: 1rem;
-  background: rgba(10, 14, 26, 0.6);
-  border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
-}
-.system-status__title {
-  font-size: 0.7rem; font-weight: 700; color: var(--accent-cyan);
-  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem;
-}
-.system-status__content {
-  font-family: monospace; font-size: 0.75rem; color: #a0aec0;
-  max-height: 100px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.log-line--error { color: #f87171; }
-.log-line--success { color: #34d399; }
 .qr-guide-corners {
   position: absolute; inset: -4px;
   border-radius: inherit;
