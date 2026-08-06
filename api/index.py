@@ -84,19 +84,22 @@ def predict(req: PredictRequest):
         features = np.array([[ammonia, req.ph_level, temp, req.storage_time_hrs, humidity]])
         
         # 3. Predict
-        prediction = model.predict(features)[0]
+        prediction_val = int(model.predict(features)[0])
         probabilities = model.predict_proba(features)[0]
         
+        STATUS_MAP = {0: "SAFE", 1: "CAUTION", 2: "UNSAFE"}
+        prediction_str = STATUS_MAP.get(prediction_val, "CAUTION")
+        
         # Determine recommended action
-        if prediction == "Unsafe":
+        if prediction_str == "UNSAFE":
             action = "Product shows definitive spoilage markers. Discard immediately."
-        elif prediction == "Caution":
+        elif prediction_str == "CAUTION":
             action = "Product is nearing end of shelf life. Prioritize for immediate sale or test physically."
         else:
             action = "Product is within safe freshness bounds. Continue storing at recommended chill temperature."
             
         return {
-            "prediction": prediction,
+            "prediction": prediction_str,
             "confidence_scores": {
                 "SAFE": float(probabilities[0]),
                 "CAUTION": float(probabilities[1]),

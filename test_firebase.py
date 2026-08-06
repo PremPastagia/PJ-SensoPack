@@ -4,7 +4,7 @@ from firebase_admin import credentials, db
 import os
 
 cred_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
-FIREBASE_DB_URL = 'https://pj-sensopack.firebaseio.com/'
+FIREBASE_DB_URL = 'https://pj-sensopack-default-rtdb.asia-southeast1.firebasedatabase.app/'
 
 cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred, {
