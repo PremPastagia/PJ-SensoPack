@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # Load Model
-MODEL_PATH = os.path.join(os.path.dirname(__dirname__), "shrimp_spoilage_model.joblib")
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "shrimp_spoilage_model.joblib")
 try:
     model = joblib.load(MODEL_PATH)
 except Exception as e:
@@ -32,20 +32,21 @@ try:
     cred_json = os.environ.get('FIREBASE_CREDENTIALS')
     db_url = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.firebaseio.com/')
     
-    if cred_json:
-        cred_dict = json.loads(cred_json)
-        cred = credentials.Certificate(cred_dict)
-    else:
-        # Local fallback
-        cred_path = os.path.join(os.path.dirname(__dirname__), "serviceAccountKey.json")
-        if os.path.exists(cred_path):
-            cred = credentials.Certificate(cred_path)
+    if not firebase_admin._apps:
+        if cred_json:
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
         else:
-            raise Exception("No serviceAccountKey.json found and FIREBASE_CREDENTIALS env var not set.")
-        
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': db_url
-    })
+            # Local fallback
+            cred_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "serviceAccountKey.json")
+            if os.path.exists(cred_path):
+                cred = credentials.Certificate(cred_path)
+            else:
+                raise Exception("No serviceAccountKey.json found and FIREBASE_CREDENTIALS env var not set.")
+            
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': db_url
+        })
     firebase_initialized = True
 except Exception as e:
     print(f"Firebase Init Error: {e}")
