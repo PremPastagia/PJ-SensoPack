@@ -30,6 +30,7 @@ const dom = {
   ammoniaSlider:  document.getElementById("ammonia-slider"),
   ammoniaVal:     document.getElementById("ammonia-val-text"),
   ammoniaTooltip: document.getElementById("ammonia-tooltip"),
+  ammoniaStatus:  document.getElementById("ammonia-status"),
 
   // Summary Fields
   scanSummary:    document.getElementById("scan-summary"),
@@ -89,13 +90,19 @@ const Camera = {
 
   async init() {
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
       });
-      dom.video.srcObject = this.stream;
+      if (stream) {
+        dom.video.srcObject = stream;
+        
+        // Hide the "Camera will activate automatically" text once the stream is active
+        if (dom.cameraOverlay) {
+          dom.cameraOverlay.classList.add("hidden");
+        }
+      }
       await dom.video.play();
       this.ready = true;
-      dom.cameraOverlay.classList.add("camera-overlay--hidden");
       dom.scanBtn.disabled = false;
       showInfo("Camera ready");
     } catch (err) {
@@ -290,6 +297,20 @@ const UIManager = {
       const val = parseFloat(e.target.value).toFixed(1);
       dom.ammoniaVal.textContent = `${val} ppm`;
       
+      if (dom.ammoniaStatus) {
+        dom.ammoniaStatus.className = ""; // clear classes
+        if (val < 20) {
+          dom.ammoniaStatus.textContent = "(SAFE)";
+          dom.ammoniaStatus.classList.add("status-safe");
+        } else if (val < 35) {
+          dom.ammoniaStatus.textContent = "(CAUTION)";
+          dom.ammoniaStatus.style.color = "var(--caution-text)"; // using inline style since we don't have a status-caution class for text in light theme
+        } else {
+          dom.ammoniaStatus.textContent = "(DANGEROUS)";
+          dom.ammoniaStatus.style.color = "var(--unsafe-text)";
+        }
+      }
+
       if (dom.ammoniaTooltip) {
         dom.ammoniaTooltip.textContent = `${val} ppm`;
         const percent = (e.target.value - e.target.min) / (e.target.max - e.target.min);
