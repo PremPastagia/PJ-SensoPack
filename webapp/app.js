@@ -291,9 +291,7 @@ const BiofilmAnalyzer = {
 // ═══════════════════════════════════════════════════════════
 const UIManager = {
   init() {
-    const slider = document.getElementById("ammonia-slider");
-    const valDisplay = document.getElementById("ammonia-val");
-    if (slider && valDisplay) {
+    if (dom.ammoniaSlider && dom.ammoniaVal) {
       dom.ammoniaSlider.addEventListener("input", (e) => {
       const val = parseFloat(e.target.value).toFixed(1);
       dom.ammoniaVal.textContent = `${val} ppm`;
