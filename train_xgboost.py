@@ -1,0 +1,79 @@
+import pandas as pd
+import numpy as np
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+import os
+
+print("=========================================")
+print("  SensoPack XGBoost Model Trainer        ")
+print("=========================================")
+
+CSV_PATH = "esf_dataset.csv"
+
+if os.path.exists(CSV_PATH):
+    print(f"Loading real dataset from {CSV_PATH}...")
+    df = pd.read_csv(CSV_PATH)
+    # Filter for shrimp
+    if 'species' in df.columns:
+        df = df[df['species'].str.lower() == 'shrimp']
+else:
+    print(f"Dataset {CSV_PATH} not found. Generating synthetic dataset based on ESF research...")
+    # Generate realistic synthetic data based on expected ranges
+    n_samples = 1000
+    np.random.seed(42)
+    
+    temp = np.random.uniform(-5, 40, n_samples)
+    humidity = np.random.uniform(40, 100, n_samples)
+    time_exposed = np.random.uniform(0.5, 72, n_samples)
+    
+    # Gas and pH naturally rise with temperature and time
+    spoilage_factor = (temp * time_exposed) / 500.0
+    mq_raw = np.clip(100 + (spoilage_factor * 800) + np.random.normal(0, 50, n_samples), 0, 1023)
+    ph_level = np.clip(6.5 + (spoilage_factor * 2.5) + np.random.normal(0, 0.2, n_samples), 5.0, 9.0)
+    
+    # 0 = Fresh, 1 = Spoiled. Spoiled if mq_raw > 500 or ph > 7.8 or (temp > 25 and time > 4)
+    status = ((mq_raw > 400) | (ph_level > 7.6) | ((temp > 20) & (time_exposed > 6))).astype(int)
+    
+    df = pd.DataFrame({
+        'temp': temp,
+        'humidity': humidity,
+        'mq_raw': mq_raw,
+        'time_exposed_hours': time_exposed,
+        'ph_level': ph_level,
+        'status': status
+    })
+
+# 1. Select Features
+X = df[['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level']].copy()
+y = df['status']
+
+# 2. Feature Engineering
+print("Engineering features (degree_hours)...")
+X['degree_hours'] = X['temp'] * X['time_exposed_hours']
+
+# 3. Train XGBoost
+print("Training XGBoost Classifier...")
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+clf = xgb.XGBClassifier(
+    n_estimators=150,
+    max_depth=5,
+    learning_rate=0.1,
+    random_state=42,
+    use_label_encoder=False,
+    eval_metric='logloss'
+)
+
+clf.fit(X_train, y_train)
+
+# 4. Evaluate
+predictions = clf.predict(X_test)
+print("\nAccuracy:", accuracy_score(y_test, predictions))
+print("\nClassification Report:\n", classification_report(y_test, predictions))
+
+# 5. Save Model
+model_path = 'shrimp_spoilage_model_xgb.joblib'
+joblib.dump(clf, model_path)
+print(f"Model saved successfully to {model_path}")

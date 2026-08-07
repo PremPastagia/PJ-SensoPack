@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # Load Model
-MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "shrimp_spoilage_model.joblib")
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "shrimp_spoilage_model_xgb.joblib")
 try:
     model = joblib.load(MODEL_PATH)
 except Exception as e:
@@ -53,11 +53,11 @@ except Exception as e:
     firebase_initialized = False
 
 class PredictRequest(BaseModel):
+    temp: float = None
+    humidity: float = None
+    mq_raw: float
+    time_exposed_hours: float = 0.5
     ph_level: float
-    storage_time_hrs: float
-    ammonia_ppm: float
-    temperature_c: float = None
-    humidity_pct: float = None
 
 @app.get("/api/health")
 def health_check():
@@ -69,60 +69,60 @@ def predict(req: PredictRequest):
         raise HTTPException(status_code=500, detail="ML Model not loaded")
         
     try:
-        # Determine Temperature and Humidity
-        if req.temperature_c is not None and req.humidity_pct is not None:
-            # Sandbox Mode: Use provided values
-            temp = req.temperature_c
-            humidity = req.humidity_pct
+        # 1. Determine Temperature and Humidity (Sandbox vs Sensor)
+        if req.temp is not None and req.humidity is not None:
+            temp = req.temp
+            humidity = req.humidity
+            sensor_data_used = None
         else:
-            # Sensor Mode: Fetch from Firebase
             if not firebase_initialized:
                 raise HTTPException(status_code=500, detail="Firebase not configured")
-                
             ref = db.reference('sensor_state')
             sensor_data = ref.get()
-            
             if not sensor_data:
-                raise HTTPException(status_code=404, detail="No sensor data found in Firebase. Ensure the Arduino is connected and running.")
-                
+                raise HTTPException(status_code=404, detail="No sensor data in Firebase.")
             if 'temp_c' not in sensor_data or 'humidity' not in sensor_data:
-                raise HTTPException(status_code=400, detail="Missing temperature or humidity data from Arduino.")
-                
+                raise HTTPException(status_code=400, detail="Missing sensor data.")
             temp = float(sensor_data['temp_c'])
             humidity = float(sensor_data['humidity'])
+            mq_raw_fb = float(sensor_data.get('mq_raw', req.mq_raw))
+            sensor_data_used = {"temp_c": temp, "humidity": humidity, "mq_raw": mq_raw_fb}
             
-        ammonia = req.ammonia_ppm
+        mq_raw = req.mq_raw if (req.temp is not None) else mq_raw_fb
+        time_exposed = req.time_exposed_hours
+        ph_level = req.ph_level
+
+        # 2. BIOLOGICAL OVERRIDE (Failsafe)
+        if mq_raw >= 600 or temp >= 35.0 or ph_level >= 8.0:
+            return {
+                "prediction": "UNSAFE",
+                "status": "Spoiled",
+                "spoilage_probability": 0.99,
+                "reason": "Critical biological threshold breached.",
+                "sensor_data_used": sensor_data_used
+            }
+
+        # 3. FEATURE ENGINEERING
+        degree_hours = temp * time_exposed
         
-        # Model expects: ['ammonia_ppm' 'ph_level' 'temperature_c' 'storage_time_hrs' 'humidity_pct']
-        features = np.array([[ammonia, req.ph_level, temp, req.storage_time_hrs, humidity]])
+        # Features matching train_xgboost.py: ['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level', 'degree_hours']
+        features = np.array([[temp, humidity, mq_raw, time_exposed, ph_level, degree_hours]])
         
-        # 3. Predict
-        prediction_val = int(model.predict(features)[0])
-        probabilities = model.predict_proba(features)[0]
+        # 4. ML INFERENCE
+        spoilage_prob = float(model.predict_proba(features)[0][1]) # Prob of Class 1
         
-        STATUS_MAP = {0: "SAFE", 1: "CAUTION", 2: "UNSAFE"}
-        prediction_str = STATUS_MAP.get(prediction_val, "CAUTION")
-        
-        # Determine recommended action
-        if prediction_str == "UNSAFE":
-            action = "Product shows definitive spoilage markers. Discard immediately."
-        elif prediction_str == "CAUTION":
-            action = "Product is nearing end of shelf life. Prioritize for immediate sale or test physically."
+        if spoilage_prob > 0.40:
+            status = "UNSAFE"
+            action = "Product shows spoilage markers. Discard immediately."
         else:
-            action = "Product is within safe freshness bounds. Continue storing at recommended chill temperature."
-            
+            status = "SAFE"
+            action = "Product is within safe freshness bounds."
+
         return {
-            "prediction": prediction_str,
-            "confidence_scores": {
-                "SAFE": float(probabilities[0]),
-                "CAUTION": float(probabilities[1]),
-                "UNSAFE": float(probabilities[2])
-            },
-            "sensor_data_used": {
-                "ammonia_ppm": ammonia,
-                "temp_c": temp,
-                "humidity": humidity
-            },
+            "prediction": status,
+            "status": "Spoiled" if status == "UNSAFE" else "Fresh",
+            "spoilage_probability": round(spoilage_prob, 4),
+            "sensor_data_used": sensor_data_used,
             "recommended_action": action
         }
         
