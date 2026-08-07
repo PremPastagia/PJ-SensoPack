@@ -102,7 +102,13 @@ def predict(req: PredictRequest):
                 "status": "Spoiled",
                 "spoilage_probability": 0.99,
                 "reason": "Critical biological threshold breached.",
-                "sensor_data_used": sensor_data_used
+                "sensor_data_used": sensor_data_used,
+                "recommended_action": "Product shows spoilage markers. Discard immediately.",
+                "confidence_scores": {
+                    "SAFE": 0.0,
+                    "CAUTION": 0.01,
+                    "UNSAFE": 0.99
+                }
             }
 
         # 3. FEATURE ENGINEERING
