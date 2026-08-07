@@ -9,6 +9,7 @@
  */
 
 const API_URL = "/api/predict";
+let lastScanData = null;
 
 // ═══════════════════════════════════════════════════════════
 // DOM References
@@ -527,7 +528,6 @@ async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
   }
 }
 
-let lastScanData = null;
 
 // ═══════════════════════════════════════════════════════════
 // UI Helpers

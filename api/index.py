@@ -12,7 +12,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -23,7 +23,6 @@ try:
 except ImportError as e:
     print(f"Model Import Error: {e}")
     predict_proba = None
-    print(f"Failed to load model: {e}")
 
 # Initialize Firebase
 try:
@@ -71,7 +70,8 @@ def predict(req: PredictRequest):
         if req.temp is not None and req.humidity is not None:
             temp = req.temp
             humidity = req.humidity
-            sensor_data_used = None
+            mq_raw = req.mq_raw
+            sensor_data_used = {"temp_c": temp, "humidity": humidity, "mq_raw": mq_raw}
         else:
             if not firebase_initialized:
                 raise HTTPException(status_code=500, detail="Firebase not configured")
@@ -83,10 +83,9 @@ def predict(req: PredictRequest):
                 raise HTTPException(status_code=400, detail="Missing sensor data.")
             temp = float(sensor_data['temp_c'])
             humidity = float(sensor_data['humidity'])
-            mq_raw_fb = float(sensor_data.get('mq_raw', req.mq_raw))
-            sensor_data_used = {"temp_c": temp, "humidity": humidity, "mq_raw": mq_raw_fb}
+            mq_raw = float(sensor_data.get('mq_raw', req.mq_raw))
+            sensor_data_used = {"temp_c": temp, "humidity": humidity, "mq_raw": mq_raw}
             
-        mq_raw = req.mq_raw if (req.temp is not None) else mq_raw_fb
         time_exposed = req.time_exposed_hours
         ph_level = req.ph_level
 
