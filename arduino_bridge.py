@@ -59,25 +59,28 @@ try:
         
         if line and not line.startswith('#'):
             try:
-                # Expected CSV: ammonia_ppm,temperature_c,humidity_pct
-                parts = line.split(',')
-                if len(parts) == 3:
-                    ammonia = float(parts[0])
-                    temp = float(parts[1])
-                    humidity = float(parts[2])
+                # Expected JSON: {"temp": 25.0, "humidity": 60.0, "mq_raw": 400}
+                payload = json.loads(line)
+                
+                if "temp" in payload and "humidity" in payload and "mq_raw" in payload:
+                    temp = float(payload["temp"])
+                    humidity = float(payload["humidity"])
+                    mq_raw = float(payload["mq_raw"])
                     
                     data = {
-                        "ammonia_ppm": ammonia,
                         "temp_c": temp,
                         "humidity": humidity,
+                        "mq_raw": mq_raw,
                         "timestamp": time.time()
                     }
                     
                     # Push to Firebase
                     ref.set(data)
-                    print(f"[Pushed to Cloud] Ammonia: {ammonia}ppm | Temp: {temp}°C | Humidity: {humidity}%")
+                    print(f"[Pushed to Cloud] Temp: {temp}°C | Humidity: {humidity}% | MQ Raw: {mq_raw}")
+            except json.JSONDecodeError:
+                print(f"Error decoding JSON from line: '{line}'")
             except Exception as e:
-                print(f"Error parsing data line: '{line}' - {e}")
+                print(f"Unexpected error parsing line: '{line}' - {e}")
                 
         time.sleep(2) # Poll every 2 seconds
 

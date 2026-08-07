@@ -8,9 +8,7 @@
  *  4. Prediction       — orchestrate scanning → POST /api/predict → render result
  */
 
-const API_URL = window.location.origin.startsWith("http")
-  ? `${window.location.origin}/api/predict`
-  : "http://127.0.0.1:8000/api/predict";
+const API_URL = "/api/predict";
 
 // ═══════════════════════════════════════════════════════════
 // DOM References

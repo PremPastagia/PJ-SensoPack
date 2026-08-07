@@ -88,8 +88,13 @@ void loop() {
 }
 
 void sendReadings() {
-  // ── Read MQ-137 ammonia sensor ──
-  float ammoniaPpm = readAmmoniaPpm();
+  // ── Read MQ-137 raw analog value ──
+  int rawTotal = 0;
+  for (int i = 0; i < 10; i++) {
+    rawTotal += analogRead(MQ137_PIN);
+    delay(5);
+  }
+  int mq_raw = rawTotal / 10;
   
   // ── Read AHT20 temperature and humidity ──
   float temperature = 4.0;   // Default safe chilling temp
@@ -102,21 +107,22 @@ void sendReadings() {
     temperature = temp_event.temperature;
     humidity    = humidity_event.relative_humidity;
   } else if (USE_AHT20 && !ahtConnected) {
-    Serial.println("# ERROR: AHT20 not connected, using defaults");
+    // Serial.println("# ERROR: AHT20 not connected, using defaults");
   }
   
   // Clamp values to valid ranges expected by the ML model
-  ammoniaPpm  = constrain(ammoniaPpm, 0.0, 200.0);
   temperature = constrain(temperature, -20.0, 50.0);
   humidity    = constrain(humidity, 0.0, 100.0);
   
-  // ── Send CSV line ──
-  // Format: ammonia_ppm,temperature_c,humidity_pct
-  Serial.print(ammoniaPpm, 1);
-  Serial.print(",");
+  // ── Send JSON line ──
+  // Format: {"temp": 25.0, "humidity": 60.0, "mq_raw": 400}
+  Serial.print("{\"temp\": ");
   Serial.print(temperature, 1);
-  Serial.print(",");
-  Serial.println(humidity, 0);
+  Serial.print(", \"humidity\": ");
+  Serial.print(humidity, 1);
+  Serial.print(", \"mq_raw\": ");
+  Serial.print(mq_raw);
+  Serial.println("}");
 }
 
 /*
