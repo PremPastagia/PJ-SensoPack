@@ -58,7 +58,7 @@ except Exception as e:
 class PredictRequest(BaseModel):
     temp: float = None
     humidity: float = None
-    mq_raw: float
+    ammonia_ppm: float
     time_exposed_hours: float = 0.5
     ph_level: float
 
@@ -76,8 +76,8 @@ def predict(req: PredictRequest):
         if req.temp is not None and req.humidity is not None:
             temp = req.temp
             humidity = req.humidity
-            mq_raw = req.mq_raw
-            sensor_data_used = {"temp_c": temp, "humidity": humidity, "mq_raw": mq_raw}
+            ammonia_ppm = req.ammonia_ppm
+            sensor_data_used = {"temp_c": temp, "humidity": humidity, "ammonia_ppm": ammonia_ppm}
         else:
             if not firebase_initialized:
                 raise HTTPException(status_code=500, detail="Firebase not configured")
@@ -89,14 +89,18 @@ def predict(req: PredictRequest):
                 raise HTTPException(status_code=400, detail="Missing sensor data.")
             temp = float(sensor_data['temp_c'])
             humidity = float(sensor_data['humidity'])
-            mq_raw = float(sensor_data.get('mq_raw', req.mq_raw))
-            sensor_data_used = {"temp_c": temp, "humidity": humidity, "mq_raw": mq_raw}
-            
+            ammonia_ppm = float(sensor_data.get('ammonia_ppm', req.ammonia_ppm))
+            sensor_data_used = {"temp_c": temp, "humidity": humidity, "ammonia_ppm": ammonia_ppm}
+
         time_exposed = req.time_exposed_hours
         ph_level = req.ph_level
 
         # 2. BIOLOGICAL OVERRIDE (Failsafe)
-        if mq_raw >= 600 or temp >= 35.0 or ph_level >= 8.0:
+        # Thresholds match the literature-grounded "Spoiled" bounds (see
+        # PHASE1_LITERATURE.md): ammonia headspace >15ppm, pH >7.5. Storage
+        # temp >32C is just above the training data's abuse-band ceiling
+        # (-2 to 30C), i.e. clearly outside the model's trained domain.
+        if ammonia_ppm >= 15.0 or temp >= 32.0 or ph_level >= 7.5:
             return {
                 "prediction": "UNSAFE",
                 "status": "Spoiled",
@@ -113,9 +117,9 @@ def predict(req: PredictRequest):
 
         # 3. FEATURE ENGINEERING
         degree_hours = temp * time_exposed
-        
-        # Features matching train_rf.py: ['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level', 'degree_hours']
-        features = [temp, humidity, mq_raw, time_exposed, ph_level, degree_hours]
+
+        # Features matching train_rf.py: ['temp', 'humidity', 'ammonia_ppm', 'time_exposed_hours', 'ph_level', 'degree_hours']
+        features = [temp, humidity, ammonia_ppm, time_exposed, ph_level, degree_hours]
         
         # 4. ML INFERENCE
         probs = predict_proba(features)

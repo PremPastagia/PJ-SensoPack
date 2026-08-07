@@ -59,24 +59,24 @@ try:
         
         if line and not line.startswith('#'):
             try:
-                # Expected JSON: {"temp": 25.0, "humidity": 60.0, "mq_raw": 400}
+                # Expected JSON: {"temp": 25.0, "humidity": 60.0, "ammonia_ppm": 4.8}
                 payload = json.loads(line)
-                
-                if "temp" in payload and "humidity" in payload and "mq_raw" in payload:
+
+                if "temp" in payload and "humidity" in payload and "ammonia_ppm" in payload:
                     temp = float(payload["temp"])
                     humidity = float(payload["humidity"])
-                    mq_raw = float(payload["mq_raw"])
-                    
+                    ammonia_ppm = float(payload["ammonia_ppm"])
+
                     data = {
                         "temp_c": temp,
                         "humidity": humidity,
-                        "mq_raw": mq_raw,
+                        "ammonia_ppm": ammonia_ppm,
                         "timestamp": time.time()
                     }
-                    
+
                     # Push to Firebase
                     ref.set(data)
-                    print(f"[Pushed to Cloud] Temp: {temp}°C | Humidity: {humidity}% | MQ Raw: {mq_raw}")
+                    print(f"[Pushed to Cloud] Temp: {temp}°C | Humidity: {humidity}% | Ammonia: {ammonia_ppm} ppm")
             except json.JSONDecodeError:
                 print(f"Error decoding JSON from line: '{line}'")
             except Exception as e:

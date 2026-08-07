@@ -353,7 +353,7 @@ const UIManager = {
       });
     };
 
-    bindSlider(dom.slAmmonia, dom.valAmmonia, "");
+    bindSlider(dom.slAmmonia, dom.valAmmonia, "ppm");
     bindSlider(dom.slPh, dom.valPh, "");
     bindSlider(dom.slTemp, dom.valTemp, "°C");
     bindSlider(dom.slHumidity, dom.valHumidity, "%");
@@ -479,7 +479,7 @@ async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
   const payload = {
     ph_level: isSandbox ? parseFloat(dom.slPh.value) : biofilmResult.ph,
     time_exposed_hours: isSandbox ? parseFloat(dom.slStorage.value) : storageHrs,
-    mq_raw: ammoniaVal
+    ammonia_ppm: ammoniaVal
   };
   
   if (isSandbox) {
@@ -516,7 +516,7 @@ async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
       const percent = (val - slider.min) / (slider.max - slider.min);
       slider.style.setProperty('--val', `${percent * 100}%`);
     };
-    setSlider(dom.slAmmonia, dom.valAmmonia, result.sensor_data_used.mq_raw, "");
+    setSlider(dom.slAmmonia, dom.valAmmonia, result.sensor_data_used.ammonia_ppm, "ppm");
     setSlider(dom.slPh, dom.valPh, biofilmResult.ph, "");
     setSlider(dom.slTemp, dom.valTemp, result.sensor_data_used.temp_c, "°C");
     setSlider(dom.slHumidity, dom.valHumidity, result.sensor_data_used.humidity, "%");
@@ -568,7 +568,7 @@ function populateSummary(qr, biofilm, storageHrs, sensorData) {
 
   // Cloud Sensor Data
   if (sensorData) {
-    dom.sumAmmonia.textContent = sensorData.mq_raw ? sensorData.mq_raw.toFixed(0) : "—";
+    dom.sumAmmonia.textContent = sensorData.ammonia_ppm ? sensorData.ammonia_ppm.toFixed(1) + " ppm" : "—";
     dom.sumTemp.textContent = sensorData.temp_c.toFixed(1) + " °C";
     dom.sumHumidity.textContent = sensorData.humidity ? sensorData.humidity.toFixed(0) + " %" : "—";
   }
