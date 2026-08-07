@@ -55,6 +55,7 @@ except Exception as e:
 class PredictRequest(BaseModel):
     ph_level: float
     storage_time_hrs: float
+    ammonia_ppm: float
 
 @app.get("/api/health")
 def health_check():
@@ -73,12 +74,14 @@ def predict(req: PredictRequest):
         sensor_data = ref.get()
         
         if not sensor_data:
-            raise HTTPException(status_code=404, detail="No sensor data found in Firebase. Is the Arduino bridge running?")
+            raise HTTPException(status_code=404, detail="No sensor data found in Firebase. Ensure the Arduino is connected and running.")
             
-        ammonia = float(sensor_data.get('ammonia_ppm', 0.0))
-        temp = sensor_data.get('temp_c', 25.0)
-        ammonia = sensor_data.get('ammonia_ppm', 0.0)
-        humidity = sensor_data.get('humidity', 75.0)
+        if 'temp_c' not in sensor_data or 'humidity' not in sensor_data:
+            raise HTTPException(status_code=400, detail="Missing temperature or humidity data from Arduino.")
+            
+        temp = float(sensor_data['temp_c'])
+        humidity = float(sensor_data['humidity'])
+        ammonia = req.ammonia_ppm
         
         # Model expects: ['ammonia_ppm' 'ph_level' 'temperature_c' 'storage_time_hrs' 'humidity_pct']
         features = np.array([[ammonia, req.ph_level, temp, req.storage_time_hrs, humidity]])

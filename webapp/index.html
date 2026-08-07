@@ -40,11 +40,25 @@
             <div>Camera will activate automatically</div>
           </div>
         </div>
-        <button class="scan-btn" id="scan-btn">
-          📷 Scan Package
-        </button>
+        <div class="action-buttons" style="display: flex; gap: 10px; margin-bottom: 1rem;">
+          <button class="scan-btn" id="scan-btn" style="flex: 2;">
+            📷 Scan Package
+          </button>
+          
+          <label class="upload-btn" for="image-upload" style="flex: 1; text-align: center; cursor: pointer; padding: 14px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); color: var(--accent-indigo); font-weight: 700; transition: all var(--transition-fast);">
+            📁 Upload
+          </label>
+          <input type="file" id="image-upload" accept="image/*" class="hidden">
+        </div>
         
-        <!-- Demo mode toggle -->
+        <!-- Manual Sensor Input -->
+        <div class="manual-input-panel" style="padding-top: 1rem; border-top: 1px solid rgba(99,102,241,0.1);">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ammonia Level (ppm)</label>
+            <span id="ammonia-val" style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 700;">10.0 ppm</span>
+          </div>
+          <input type="range" id="ammonia-slider" min="0" max="100" step="0.1" value="10.0" style="width: 100%; accent-color: var(--accent-cyan);">
+        </div>
         <!-- Removed per user request -->
       </div>
     </div>

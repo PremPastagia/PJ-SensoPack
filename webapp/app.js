@@ -274,14 +274,75 @@ const BiofilmAnalyzer = {
 
 
 // ═══════════════════════════════════════════════════════════
-// MODULE 4: Demo Mode
+// UI Event Handlers
 // ═══════════════════════════════════════════════════════════
-// Removed DemoMode object
+const UIManager = {
+  init() {
+    const slider = document.getElementById("ammonia-slider");
+    const valDisplay = document.getElementById("ammonia-val");
+    if (slider && valDisplay) {
+      slider.addEventListener("input", (e) => {
+        valDisplay.textContent = parseFloat(e.target.value).toFixed(1) + " ppm";
+      });
+    }
 
+    const fileInput = document.getElementById("image-upload");
+    if (fileInput) {
+      fileInput.addEventListener("change", async (e) => {
+        if (e.target.files && e.target.files[0]) {
+          await this.processImageUpload(e.target.files[0]);
+        }
+      });
+    }
+  },
 
-// ═══════════════════════════════════════════════════════════
-// MODULE 5: Prediction Pipeline
-// ═══════════════════════════════════════════════════════════
+  /**
+   * Processes a manually uploaded image file to extract QR and biofilm data.
+   * @param {File} file 
+   */
+  async processImageUpload(file) {
+    dom.scanBtn.disabled = true;
+    dom.scanBtn.textContent = "⏳ Processing Image...";
+    dom.scanSummary.classList.add("hidden");
+    dom.resultPanel.classList.add("hidden");
+
+    try {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+
+      const ctx = dom.canvas.getContext("2d");
+      dom.canvas.width = img.width;
+      dom.canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, dom.canvas.width, dom.canvas.height);
+
+      const qrResult = QRDecoder.decode(imageData);
+      if (!qrResult) throw new Error("No QR code detected in the uploaded image.");
+
+      const storageHrs = QRDecoder.computeStorageHours(qrResult.data.packaging_time);
+      if (storageHrs === null || storageHrs === undefined) {
+        throw new Error("QR code missing packaging_time field.");
+      }
+
+      const biofilmResult = BiofilmAnalyzer.analyze(imageData, qrResult.location);
+      if (!biofilmResult) throw new Error("Could not detect biofilm color in the uploaded image.");
+
+      await executeScanPayload(qrResult, biofilmResult, storageHrs);
+
+    } catch (err) {
+      console.error("Upload error:", err);
+      showError(err.message);
+    } finally {
+      dom.scanBtn.disabled = false;
+      dom.scanBtn.textContent = "📷 Scan Package";
+    }
+  }
+};
+
+/**
+ * Executes a continuous live scan using the webcam feed.
+ */
 async function runScan() {
   const btn = dom.scanBtn;
   btn.disabled = true;
@@ -292,71 +353,32 @@ async function runScan() {
   dom.resultPanel.classList.add("hidden");
 
   try {
-    let qrResult, biofilmResult, storageHrs;
-
-    if (!Camera.ready) { 
-      throw new Error("Camera not available"); 
-    }
+    if (!Camera.ready) throw new Error("Camera not available. Please upload a photo instead.");
     
     btn.textContent = "⏳ Scanning Package...";
-    let imageData = null;
-      qrResult = null;
-      
-      const startTime = Date.now();
-      while (Date.now() - startTime < 3000) {
-        imageData = Camera.captureFrame();
-        qrResult = QRDecoder.decode(imageData);
-        if (qrResult) break;
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-
-      if (!qrResult) { 
-        throw new Error("No QR code detected — ensure it is in focus and well-lit");
-      }
-
-      if (qrResult.data.packaging_time) {
-        storageHrs = QRDecoder.computeStorageHours(qrResult.data.packaging_time);
-      }
-      if (storageHrs === null || storageHrs === undefined) {
-        throw new Error("QR code missing packaging_time field");
-      }
-
-      biofilmResult = BiofilmAnalyzer.analyze(imageData, qrResult.location);
-      if (!biofilmResult) {
-        throw new Error("Could not detect biofilm color — ensure the indicator is visible");
-      }
-
-    const payload = {
-      ph_level: biofilmResult.ph,
-      storage_time_hrs: storageHrs
-    };
-
-    console.log("Visual Payload to API:", payload);
-
-    btn.textContent = "🧠 Fetching Firebase & Predicting...";
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || `Server returned HTTP ${response.status}`);
+    let imageData = null, qrResult = null;
+    
+    const startTime = Date.now();
+    while (Date.now() - startTime < 3000) {
+      imageData = Camera.captureFrame();
+      qrResult = QRDecoder.decode(imageData);
+      if (qrResult) break;
+      await new Promise(resolve => setTimeout(resolve, 150));
     }
 
-    const result = await response.json();
-    
-    // Hide Camera and show panels
-    dom.mainView.classList.add("hidden");
-    
-    populateSummary(qrResult, biofilmResult, storageHrs, result.sensor_data_used);
-    dom.scanSummary.classList.remove("hidden");
+    if (!qrResult) throw new Error("No QR code detected — ensure it is in focus and well-lit.");
 
-    renderResult(result);
-    dom.resultPanel.classList.remove("hidden");
+    const storageHrs = QRDecoder.computeStorageHours(qrResult.data.packaging_time);
+    if (storageHrs === null || storageHrs === undefined) {
+      throw new Error("QR code missing packaging_time field");
+    }
 
-    showInfo("Prediction complete!");
+    const biofilmResult = BiofilmAnalyzer.analyze(imageData, qrResult.location);
+    if (!biofilmResult) {
+      throw new Error("Could not detect biofilm color — ensure the indicator is visible");
+    }
+
+    await executeScanPayload(qrResult, biofilmResult, storageHrs);
 
   } catch (err) {
     console.error("Scan error:", err);
@@ -368,6 +390,44 @@ async function runScan() {
   }
 }
 
+/**
+ * Packages the extracted data and sends it to the API backend.
+ * @param {Object} qrResult 
+ * @param {Object} biofilmResult 
+ * @param {number} storageHrs 
+ */
+async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
+  const ammoniaSlider = document.getElementById("ammonia-slider");
+  const ammoniaVal = ammoniaSlider ? parseFloat(ammoniaSlider.value) : 0.0;
+
+  const payload = {
+    ph_level: biofilmResult.ph,
+    storage_time_hrs: storageHrs,
+    ammonia_ppm: ammoniaVal
+  };
+
+  console.log("Payload to API:", payload);
+  dom.scanBtn.textContent = "🧠 Fetching Live Data & Predicting...";
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || `Server error (HTTP ${response.status}). Is Arduino live?`);
+  }
+
+  const result = await response.json();
+  dom.mainView.classList.add("hidden");
+  populateSummary(qrResult, biofilmResult, storageHrs, result.sensor_data_used);
+  renderResult(result);
+  
+  dom.scanSummary.classList.remove("hidden");
+  dom.resultPanel.classList.remove("hidden");
+}
 
 // ═══════════════════════════════════════════════════════════
 // UI Helpers
@@ -438,14 +498,14 @@ function updateBar(barEl, textEl, score) {
 
 function showInfo(msg) {
   dom.infoToast.textContent = msg;
-  dom.infoToast.classList.add("show");
-  setTimeout(() => dom.infoToast.classList.remove("show"), 3000);
+  dom.infoToast.classList.add("info-toast--visible");
+  setTimeout(() => dom.infoToast.classList.remove("info-toast--visible"), 3000);
 }
 
 function showError(msg) {
   dom.errorToast.textContent = msg;
-  dom.errorToast.classList.add("show");
-  setTimeout(() => dom.errorToast.classList.remove("show"), 4000);
+  dom.errorToast.classList.add("error-toast--visible");
+  setTimeout(() => dom.errorToast.classList.remove("error-toast--visible"), 4000);
 }
 
 function sleep(ms) {
@@ -457,12 +517,9 @@ function sleep(ms) {
 // ═══════════════════════════════════════════════════════════
 window.addEventListener("DOMContentLoaded", () => {
   Camera.init();
+  UIManager.init();
 
   dom.scanBtn.addEventListener("click", () => {
     if (!dom.scanBtn.disabled) runScan();
-  });
-
-  dom.demoToggle.addEventListener("change", (e) => {
-    DemoMode.toggle(e.target.checked);
   });
 });
