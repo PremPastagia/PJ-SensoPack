@@ -2,7 +2,7 @@
  * SensoPack — Arduino Sensor Hub (PJSketch)
  * 
  * Reads sensor values ON DEMAND and sends them over Serial at 9600 baud
- * in CSV format:  ammonia_ppm,temperature_c,humidity_pct\n
+ * as a JSON line: {"temp": 25.0, "humidity": 60.0, "ammonia_ppm": 4.8}\n
  * 
  * Protocol:
  *   The web app sends 'R\n' when it needs a reading.
@@ -62,7 +62,7 @@ void setup() {
   
   Serial.println("# SensoPack Arduino Sensor Hub starting...");
   Serial.println("# Warming up MQ-135 sensor on pin A0 (30 seconds)...");
-  Serial.println("# Format: ammonia_ppm,temperature_c,humidity_pct");
+  Serial.println("# Format: {\"temp\":..,\"humidity\":..,\"ammonia_ppm\":..}");
 }
 
 void loop() {
@@ -88,46 +88,46 @@ void loop() {
 }
 
 void sendReadings() {
-  // ── Read MQ-135 raw analog value ──
-  int rawTotal = 0;
-  for (int i = 0; i < 10; i++) {
-    rawTotal += analogRead(MQ135_PIN);
-    delay(5);
-  }
-  int mq_raw = rawTotal / 10;
-  
+  // ── Read MQ-135 and convert to calibrated ammonia ppm ──
+  // (previously this sent the raw uncalibrated analog average under a
+  // "mq_raw" field, which silently bypassed this exact conversion curve
+  // despite it being fully implemented below -- the ML model was retrained
+  // against that arbitrary 0-1023 raw scale instead of real ppm, which is
+  // why thresholds stopped lining up with the literature-grounded bounds.)
+  float ammonia_ppm = readAmmoniaPpm();
+
   // ── Read AHT20 temperature and humidity ──
   float temperature = 4.0;   // Default safe chilling temp
   float humidity    = 85.0;  // Default humidity
-  
+
   if (USE_AHT20 && ahtConnected) {
     sensors_event_t humidity_event, temp_event;
     aht.getEvent(&humidity_event, &temp_event);
-    
+
     temperature = temp_event.temperature;
     humidity    = humidity_event.relative_humidity;
   } else if (USE_AHT20 && !ahtConnected) {
     // Serial.println("# ERROR: AHT20 not connected, using defaults");
   }
-  
+
   // Clamp values to valid ranges expected by the ML model
   temperature = constrain(temperature, -20.0, 50.0);
   humidity    = constrain(humidity, 0.0, 100.0);
-  
+
   // ── Send JSON line ──
-  // Format: {"temp": 25.0, "humidity": 60.0, "mq_raw": 400}
+  // Format: {"temp": 25.0, "humidity": 60.0, "ammonia_ppm": 4.8}
   Serial.print("{\"temp\": ");
   Serial.print(temperature, 1);
   Serial.print(", \"humidity\": ");
   Serial.print(humidity, 1);
-  Serial.print(", \"mq_raw\": ");
-  Serial.print(mq_raw);
+  Serial.print(", \"ammonia_ppm\": ");
+  Serial.print(ammonia_ppm, 2);
   Serial.println("}");
 }
 
 /*
  * Read the MQ-135 analog value and convert to ammonia ppm.
- * 
+ *
  * The MQ-135 outputs a variable resistance based on gas concentration.
  * We convert the analog reading to a resistance ratio (Rs/R0),
  * then use the datasheet's log-log curve to estimate ppm.
@@ -140,23 +140,23 @@ float readAmmoniaPpm() {
     delay(5);
   }
   float rawAvg = rawTotal / 10.0;
-  
+
   // Prevent division by zero
   if (rawAvg < 1) rawAvg = 1;
-  
+
   // Convert analog reading to sensor resistance (Rs)
   // Voltage divider: Vout = VCC * RL / (Rs + RL)
   // Rs = RL * (1023 - rawAvg) / rawAvg
   float rs = MQ135_RL * (1023.0 - rawAvg) / rawAvg;
-  
+
   // Ratio of sensor resistance to clean-air resistance
   float ratio = rs / MQ135_R0;
-  
+
   // Convert ratio to ppm using log-log relationship from datasheet
   // log10(ppm) = slope * log10(ratio) + intercept
   float logPpm = MQ135_SLOPE * log10(ratio) + MQ135_INTERCEPT;
   float ppm = pow(10.0, logPpm);
-  
+
   return ppm;
 }
 

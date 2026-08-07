@@ -12,6 +12,18 @@ print("=========================================")
 
 CSV_PATH = "esf_dataset.csv"
 
+# Literature-grounded bounds (see PHASE1_LITERATURE.md from the original
+# Phase 1 research pass): TVB-N Fresh 0-25 | Caution 25-35 | Spoiled >35
+# mg N/100g; pH Fresh 6.5-7.2 | Caution 7.2-7.5 | Spoiled >7.5; ammonia
+# headspace (MQ-135-class sensor) Fresh 0-5 | Caution 5-15 | Spoiled >15
+# ppm; storage temp -2 to 30C; Arrhenius Ea=118 kJ/mol for chilled/frozen
+# shrimp chemical spoilage indices.
+EA = 118_000.0       # J/mol
+R_GAS = 8.314         # J/mol.K
+T_REF_K = 273.15      # 0C reference for the rate multiplier
+TVBN_FRESH_MAX = 25.0
+TVBN_CAUTION_MAX = 35.0
+
 if os.path.exists(CSV_PATH):
     print(f"Loading real dataset from {CSV_PATH}...")
     df = pd.read_csv(CSV_PATH)
@@ -19,73 +31,55 @@ if os.path.exists(CSV_PATH):
     if 'species' in df.columns:
         df = df[df['species'].str.lower() == 'shrimp']
 else:
-    print(f"Dataset {CSV_PATH} not found. Generating synthetic dataset based on ESF research...")
-    # Generate realistic synthetic data based on expected ranges
+    print(f"Dataset {CSV_PATH} not found. Generating synthetic dataset from literature-grounded Arrhenius kinetics...")
     n_samples = 4000
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
 
-    # Storage temperature varies across real-world scenarios: cold-chain,
-    # ambient room temp (matching the ESF dataset's ~25C baseline), and
-    # heat-abuse conditions. A constant temp collapses to zero variance and
-    # makes the gas/pH sensor features redundant proxies of time alone.
-    scenario = np.random.choice(["cold", "ambient", "hot"], size=n_samples, p=[0.35, 0.4, 0.25])
-    temp = np.where(
-        scenario == "cold", np.random.uniform(0, 4, n_samples),
-        np.where(scenario == "ambient", np.random.uniform(20, 28, n_samples),
-                 np.random.uniform(28, 42, n_samples))
+    # Storage temperature: mixture of realistic scenarios, weighted toward
+    # the chill band (real cold-chain data is mostly chilled product, not
+    # retail-abuse). Matches the literature's -2 to 30C input range.
+    band = rng.choice(["chill", "moderate", "abuse"], size=n_samples, p=[0.55, 0.30, 0.15])
+    temp = np.empty(n_samples)
+    temp[band == "chill"] = rng.uniform(-2, 4, size=(band == "chill").sum())
+    temp[band == "moderate"] = rng.uniform(4, 10, size=(band == "moderate").sum())
+    temp[band == "abuse"] = rng.uniform(10, 30, size=(band == "abuse").sum())
+
+    humidity = rng.uniform(70, 95, size=n_samples)  # weak/no relationship to spoilage, by design
+    time_exposed = rng.uniform(0, 360.0, size=n_samples)  # 0-15 days
+
+    # Arrhenius rate multiplier relative to the 0C reference rate.
+    t_k = temp + 273.15
+    k_t = np.exp(-EA / (R_GAS * t_k))
+    k_ref = np.exp(-EA / (R_GAS * T_REF_K))
+    rate_mult = k_t / k_ref
+
+    # Normalizing constant tuned so cut-points land mid-sample-range.
+    spoilage_progress = rate_mult * time_exposed / 900.0
+    s_clip = np.clip(spoilage_progress, 0, 1.0)
+
+    # TVB-N is the ground-truth spoilage indicator; ammonia and pH are
+    # noisy sensor proxies of it (target ~0.75-0.90 pairwise correlation,
+    # not near-perfect -- real sensors partially disagree).
+    tvbn = np.clip(2.0 + 33.0 * s_clip + rng.normal(0, 4.0, size=n_samples), 0.5, None)
+    ph_level = np.clip(6.6 + 0.9 * s_clip + rng.normal(0, 0.20, size=n_samples), 6.0, 8.2)
+    ammonia_ppm = np.clip(1.0 + 14.0 * (s_clip ** 1.2) + rng.normal(0, 3.0, size=n_samples), 0.1, None)
+
+    status = np.where(
+        tvbn <= TVBN_FRESH_MAX, 0,
+        np.where(tvbn <= TVBN_CAUTION_MAX, 1, 2)
     )
-    humidity = np.random.uniform(40, 100, n_samples)
-    time_exposed = np.random.uniform(0.5, 200, n_samples)
-
-    # Microbial spoilage only accumulates meaningfully above ~4C (cold-chain
-    # storage halts it), and accumulates faster with heat.
-    temp_effect = np.clip(temp - 4.0, 0, None)
-    degree_hours = temp_effect * time_exposed
-
-    # Real spoilage also varies batch-to-batch (initial microbial load,
-    # packaging integrity, humidity) well beyond what temp*time alone
-    # explains -- degree_hours is computable noise-free from raw temp/time
-    # inputs, so unless batch variance is substantial, the model shortcuts
-    # through degree_hours and never learns to trust the gas/pH sensors,
-    # which are what the hardware actually measures in the field. This
-    # "true" spoilage index is what the sensors actually measure.
-    batch_factor = np.clip(np.random.normal(1.0, 0.7, n_samples), 0.15, 3.0)
-    true_spoilage = degree_hours * batch_factor
-
-    # Gas and pH sensors are direct (lightly-noisy) readings of the true
-    # spoilage index -- more reliable in practice than reconstructing
-    # elapsed temp*time history from a QR timestamp. true_spoilage has a
-    # long right tail (heat-abuse + high batch_factor), so map it through a
-    # saturating (Michaelis-Menten) curve rather than a linear scale -- a
-    # linear map clips most samples to the sensor ceiling, collapsing them
-    # to one indistinguishable value and starving the model of any graded
-    # gas/pH signal near the actual decision boundaries.
-    K = 1000.0  # half-saturation point, tuned below the Caution threshold
-    saturation = true_spoilage / (true_spoilage + K)
-    mq_raw = np.clip(90 + (saturation * 900) + np.random.normal(0, 20, n_samples), 0, 1023)
-    ph_level = np.clip(6.3 + (saturation * 2.6) + np.random.normal(0, 0.08, n_samples), 5.0, 9.0)
-
-    # 0 = Safe, 1 = Caution, 2 = Spoiled, thresholded on the true spoilage
-    # index (not a sensor reading). Safe = bottom 50%, Caution = 50-75%,
-    # Spoiled = top 25%.
-    threshold_caution = np.quantile(true_spoilage, 0.50)
-    threshold_spoiled = np.quantile(true_spoilage, 0.75)
-
-    status = np.zeros(n_samples, dtype=int)
-    status[true_spoilage > threshold_caution] = 1
-    status[true_spoilage > threshold_spoiled] = 2
 
     df = pd.DataFrame({
         'temp': temp,
         'humidity': humidity,
-        'mq_raw': mq_raw,
+        'ammonia_ppm': ammonia_ppm,
         'time_exposed_hours': time_exposed,
         'ph_level': ph_level,
         'status': status
     })
 
 # 1. Select Features
-X = df[['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level']].copy()
+X = df[['temp', 'humidity', 'ammonia_ppm', 'time_exposed_hours', 'ph_level']].copy()
 y = df['status']
 
 # 2. Feature Engineering
