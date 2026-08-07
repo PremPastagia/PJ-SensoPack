@@ -27,6 +27,7 @@ const dom = {
   imageUpload:    document.getElementById("image-upload"),
 
   // Manual Inputs
+  metricsCard:    document.getElementById("metrics-card"),
   ammoniaSlider:  document.getElementById("ammonia-slider"),
   ammoniaVal:     document.getElementById("ammonia-val-text"),
   ammoniaTooltip: document.getElementById("ammonia-tooltip"),
@@ -322,6 +323,17 @@ const UIManager = {
         dom.ammoniaSlider.style.setProperty('--val', `${percent * 100}%`);
       }
     });
+    
+    dom.ammoniaSlider.addEventListener("change", (e) => {
+      // Re-trigger prediction if we already have scan data
+      if (lastScanData) {
+        executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs)
+          .catch(err => {
+            console.error("Re-prediction error:", err);
+            showError("Failed to update prediction with new ammonia level.");
+          });
+      }
+    });
     }
 
     const fileInput = document.getElementById("image-upload");
@@ -435,6 +447,9 @@ async function runScan() {
  * @param {number} storageHrs 
  */
 async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
+  // Save scan data so slider can re-trigger
+  lastScanData = { qrResult, biofilmResult, storageHrs };
+  
   const ammoniaSlider = document.getElementById("ammonia-slider");
   const ammoniaVal = ammoniaSlider ? parseFloat(ammoniaSlider.value) : 0.0;
 
@@ -465,7 +480,12 @@ async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
   
   dom.scanSummary.classList.remove("hidden");
   dom.resultPanel.classList.remove("hidden");
+  if (dom.metricsCard) {
+    dom.metricsCard.classList.remove("hidden");
+  }
 }
+
+let lastScanData = null;
 
 // ═══════════════════════════════════════════════════════════
 // UI Helpers
