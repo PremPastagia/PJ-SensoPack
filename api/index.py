@@ -1,7 +1,5 @@
 import os
 import json
-import joblib
-import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -19,12 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Model
-MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "shrimp_spoilage_model_xgb.joblib")
+# Load Pure Python XGBoost Model
 try:
-    model = joblib.load(MODEL_PATH)
-except Exception as e:
-    model = None
+    from xgb_model import predict_proba
+except ImportError as e:
+    print(f"Model Import Error: {e}")
+    predict_proba = None
     print(f"Failed to load model: {e}")
 
 # Initialize Firebase
@@ -65,7 +63,7 @@ def health_check():
 
 @app.post("/api/predict")
 def predict(req: PredictRequest):
-    if not model:
+    if not predict_proba:
         raise HTTPException(status_code=500, detail="ML Model not loaded")
         
     try:
@@ -106,10 +104,11 @@ def predict(req: PredictRequest):
         degree_hours = temp * time_exposed
         
         # Features matching train_xgboost.py: ['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level', 'degree_hours']
-        features = np.array([[temp, humidity, mq_raw, time_exposed, ph_level, degree_hours]])
+        features = [temp, humidity, mq_raw, time_exposed, ph_level, degree_hours]
         
         # 4. ML INFERENCE
-        spoilage_prob = float(model.predict_proba(features)[0][1]) # Prob of Class 1
+        probs = predict_proba(features)
+        spoilage_prob = float(probs[1]) # Prob of Class 1
         
         if spoilage_prob > 0.40:
             status = "UNSAFE"
