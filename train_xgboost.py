@@ -21,30 +21,60 @@ if os.path.exists(CSV_PATH):
 else:
     print(f"Dataset {CSV_PATH} not found. Generating synthetic dataset based on ESF research...")
     # Generate realistic synthetic data based on expected ranges
-    n_samples = 1000
+    n_samples = 4000
     np.random.seed(42)
-    
-    # ESF dataset was recorded at room temperature (25°C)
-    temp = np.full(n_samples, 25.0)
+
+    # Storage temperature varies across real-world scenarios: cold-chain,
+    # ambient room temp (matching the ESF dataset's ~25C baseline), and
+    # heat-abuse conditions. A constant temp collapses to zero variance and
+    # makes the gas/pH sensor features redundant proxies of time alone.
+    scenario = np.random.choice(["cold", "ambient", "hot"], size=n_samples, p=[0.35, 0.4, 0.25])
+    temp = np.where(
+        scenario == "cold", np.random.uniform(0, 4, n_samples),
+        np.where(scenario == "ambient", np.random.uniform(20, 28, n_samples),
+                 np.random.uniform(28, 42, n_samples))
+    )
     humidity = np.random.uniform(40, 100, n_samples)
-    time_exposed = np.random.uniform(0.5, 72, n_samples)
-    
-    # Gas and pH naturally rise with temperature and time
-    spoilage_factor = (temp * time_exposed) / 500.0
-    mq_raw = np.clip(100 + (spoilage_factor * 800) + np.random.normal(0, 50, n_samples), 0, 1023)
-    ph_level = np.clip(6.5 + (spoilage_factor * 2.5) + np.random.normal(0, 0.2, n_samples), 5.0, 9.0)
-    
-    # 0 = Safe, 1 = Caution, 2 = Spoiled.
-    # We will sort by spoilage factor and use percentiles to assign classes.
-    # E.g. Safe = Bottom 50%, Caution = 50%-75%, Spoiled = Top 25%
-    df_temp = pd.DataFrame({'mq_raw': mq_raw, 'ph_level': ph_level, 'spoilage_factor': spoilage_factor})
-    threshold_caution = df_temp['spoilage_factor'].quantile(0.50)
-    threshold_spoiled = df_temp['spoilage_factor'].quantile(0.75)
-    
+    time_exposed = np.random.uniform(0.5, 200, n_samples)
+
+    # Microbial spoilage only accumulates meaningfully above ~4C (cold-chain
+    # storage halts it), and accumulates faster with heat.
+    temp_effect = np.clip(temp - 4.0, 0, None)
+    degree_hours = temp_effect * time_exposed
+
+    # Real spoilage also varies batch-to-batch (initial microbial load,
+    # packaging integrity, humidity) well beyond what temp*time alone
+    # explains -- degree_hours is computable noise-free from raw temp/time
+    # inputs, so unless batch variance is substantial, the model shortcuts
+    # through degree_hours and never learns to trust the gas/pH sensors,
+    # which are what the hardware actually measures in the field. This
+    # "true" spoilage index is what the sensors actually measure.
+    batch_factor = np.clip(np.random.normal(1.0, 0.7, n_samples), 0.15, 3.0)
+    true_spoilage = degree_hours * batch_factor
+
+    # Gas and pH sensors are direct (lightly-noisy) readings of the true
+    # spoilage index -- more reliable in practice than reconstructing
+    # elapsed temp*time history from a QR timestamp. true_spoilage has a
+    # long right tail (heat-abuse + high batch_factor), so map it through a
+    # saturating (Michaelis-Menten) curve rather than a linear scale -- a
+    # linear map clips most samples to the sensor ceiling, collapsing them
+    # to one indistinguishable value and starving the model of any graded
+    # gas/pH signal near the actual decision boundaries.
+    K = 1000.0  # half-saturation point, tuned below the Caution threshold
+    saturation = true_spoilage / (true_spoilage + K)
+    mq_raw = np.clip(90 + (saturation * 900) + np.random.normal(0, 20, n_samples), 0, 1023)
+    ph_level = np.clip(6.3 + (saturation * 2.6) + np.random.normal(0, 0.08, n_samples), 5.0, 9.0)
+
+    # 0 = Safe, 1 = Caution, 2 = Spoiled, thresholded on the true spoilage
+    # index (not a sensor reading). Safe = bottom 50%, Caution = 50-75%,
+    # Spoiled = top 25%.
+    threshold_caution = np.quantile(true_spoilage, 0.50)
+    threshold_spoiled = np.quantile(true_spoilage, 0.75)
+
     status = np.zeros(n_samples, dtype=int)
-    status[spoilage_factor > threshold_caution] = 1
-    status[spoilage_factor > threshold_spoiled] = 2
-    
+    status[true_spoilage > threshold_caution] = 1
+    status[true_spoilage > threshold_spoiled] = 2
+
     df = pd.DataFrame({
         'temp': temp,
         'humidity': humidity,

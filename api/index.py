@@ -64,7 +64,7 @@ class PredictRequest(BaseModel):
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "firebase": firebase_initialized, "model_loaded": model is not None}
+    return {"status": "ok", "firebase": firebase_initialized, "model_loaded": predict_proba is not None}
 
 @app.post("/api/predict")
 def predict(req: PredictRequest):
