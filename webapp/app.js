@@ -27,6 +27,7 @@ const dom = {
   // Manual Inputs (Sandbox)
   sandboxCard:    document.getElementById("sandbox-card"),
   sandboxToggle:  document.getElementById("sandbox-toggle"),
+  btnSimulate:    document.getElementById("btn-simulate"),
   slAmmonia:      document.getElementById("slider-ammonia"),
   slPh:           document.getElementById("slider-ph"),
   slTemp:         document.getElementById("slider-temp"),
@@ -304,10 +305,30 @@ const UIManager = {
         dom.slTemp.disabled = !isSandbox;
         dom.slHumidity.disabled = !isSandbox;
         dom.slStorage.disabled = !isSandbox;
+        if (dom.btnSimulate) {
+          dom.btnSimulate.style.display = isSandbox ? "block" : "none";
+        }
         
         if (lastScanData) {
           executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs).catch(console.error);
         }
+      });
+    }
+
+    if (dom.btnSimulate) {
+      dom.btnSimulate.addEventListener("click", () => {
+        // Create dummy objects to satisfy executeScanPayload and keep QR fields "empty/placeholder"
+        const dummyQrResult = { 
+          data: { batch_id: "—", product_id: "—", packaging_time: null, initial_temp_c: dom.slTemp.value }, 
+          location: null 
+        };
+        const dummyBiofilmResult = { 
+          ph: parseFloat(dom.slPh.value), 
+          rgb: {r: 200, g: 200, b: 200}, 
+          hsv: {h: 0, s: 0, v: 78} 
+        };
+        const dummyStorageHrs = parseFloat(dom.slStorage.value);
+        executeScanPayload(dummyQrResult, dummyBiofilmResult, dummyStorageHrs).catch(console.error);
       });
     }
 
