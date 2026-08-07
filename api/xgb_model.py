@@ -276,8 +276,8 @@ def score(input):
 
 def predict_proba(input_features):
     # m2cgen score function
-    score = score(input_features)
+    s = score(input_features)
     # Convert log-odds to probability of class 1
     # XGBoost binary classification margin -> sigmoid
-    prob_class_1 = 1.0 / (1.0 + math.exp(-score))
+    prob_class_1 = 1.0 / (1.0 + math.exp(-s))
     return [1.0 - prob_class_1, prob_class_1]

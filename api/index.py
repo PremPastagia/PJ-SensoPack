@@ -18,11 +18,17 @@ app.add_middleware(
 )
 
 # Load Pure Python XGBoost Model
+import sys
+sys.path.append(os.path.dirname(__file__))
+
 try:
     from xgb_model import predict_proba
-except ImportError as e:
-    print(f"Model Import Error: {e}")
-    predict_proba = None
+except ImportError:
+    try:
+        from api.xgb_model import predict_proba
+    except ImportError as e:
+        print(f"Model Import Error: {e}")
+        predict_proba = None
 
 # Initialize Firebase
 try:
