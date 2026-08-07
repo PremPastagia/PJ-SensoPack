@@ -2,181 +2,223 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="SensoPack — Smart shrimp freshness scanner. Scan package, read sensors, predict spoilage.">
-  <title>SensoPack — Smart Freshness Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SensoPack - Smart Freshness Scanner</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦐</text></svg>">
+  
+  <!-- jsQR for QR reading -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- Main logic -->
+  <script src="app.js" defer></script>
 </head>
 <body>
 
+  <!-- Top Navbar -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        SensoPack
+      </div>
+    </div>
+    <div class="navbar-center">
+      <a href="#" class="nav-link active">Dashboard</a>
+      <a href="#" class="nav-link">Shipments</a>
+      <a href="#" class="nav-link">Inventory</a>
+      <a href="#" class="nav-link">Reports</a>
+      <a href="#" class="nav-link">Settings</a>
+    </div>
+    <div class="navbar-right">
+      <div class="user-profile">
+        <div class="avatar">AS</div>
+        <div class="user-info">
+          <span class="name">Alex S.</span>
+          <span class="role">Settings</span>
+        </div>
+      </div>
+      <button class="nav-btn">Open</button>
+    </div>
+  </nav>
+
   <div class="app-container">
 
-    <!-- Header -->
-    <header class="header">
-      <div class="header__badge"><span class="dot"></span> Cloud Architecture Active</div>
-      <h1 class="header__title">SensoPack</h1>
-      <p class="header__subtitle">Scan a package to instantly assess shrimp freshness</p>
-    </header>
-
-    <!-- Main View: Camera -->
-    <div class="main-grid" id="main-view" style="display: flex; justify-content: center; width: 100%;">
-      <!-- Camera Panel -->
-      <div class="camera-panel glass-card" id="camera-panel" style="max-width: 500px; width: 100%;">
-        <div class="camera-panel__title">📷 Mobile Scanner</div>
-        <div class="camera-preview-wrapper">
+    <!-- MAIN VIEW (Scanner) -->
+    <div id="main-view" class="dashboard-grid">
+      
+      <!-- Scanner Card -->
+      <div class="card scanner-card">
+        <h2 class="card-title text-center">Scan or Upload Package</h2>
+        
+        <div class="camera-wrapper" id="camera-wrapper">
           <video id="camera-video" autoplay playsinline muted></video>
-          <canvas id="camera-canvas"></canvas>
-          <!-- QR Alignment Guide -->
-          <div class="qr-guide" id="qr-guide">
-             <div class="qr-guide-corners"></div>
+          <canvas id="camera-canvas" class="hidden"></canvas>
+          
+          <!-- Viewfinder Graphics -->
+          <div class="viewfinder">
+            <div class="vf-corner vf-tl"></div>
+            <div class="vf-corner vf-tr"></div>
+            <div class="vf-corner vf-bl"></div>
+            <div class="vf-corner vf-br"></div>
+            <div class="vf-text vf-text-top">ALIGN BARCODE</div>
+            <div class="vf-text vf-text-bottom">FOCUSING</div>
+            
+            <!-- Simulated bounding box from image -->
+            <div class="vf-box">
+              <div class="vf-line"></div>
+            </div>
           </div>
+
           <div class="camera-overlay" id="camera-overlay">
             <div class="camera-overlay__icon">📷</div>
             <div>Camera will activate automatically</div>
           </div>
         </div>
-        <div class="action-buttons" style="display: flex; gap: 10px; margin-bottom: 1rem;">
-          <button class="scan-btn" id="scan-btn" style="flex: 2;">
-            📷 Scan Package
+
+        <div class="side-info hidden-mobile">
+          <strong>SCAN IN PROGRESS...</strong><br>
+          <span class="text-muted">Ensure the label is centered and readable.</span>
+        </div>
+        
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="scan-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            Scan Package
           </button>
           
-          <label class="upload-btn" for="image-upload" style="flex: 1; text-align: center; cursor: pointer; padding: 14px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); color: var(--accent-indigo); font-weight: 700; transition: all var(--transition-fast);">
-            📁 Upload
+          <label class="btn btn-secondary" for="image-upload">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            Upload Image
           </label>
           <input type="file" id="image-upload" accept="image/*" class="hidden">
         </div>
-        
-        <!-- Manual Sensor Input -->
-        <div class="manual-input-panel" style="padding-top: 1rem; border-top: 1px solid rgba(99,102,241,0.1);">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ammonia Level (ppm)</label>
-            <span id="ammonia-val" style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 700;">10.0 ppm</span>
-          </div>
-          <input type="range" id="ammonia-slider" min="0" max="100" step="0.1" value="10.0" style="width: 100%; accent-color: var(--accent-cyan);">
+      </div>
+
+      <!-- Metrics Card -->
+      <div class="card metrics-card">
+        <div class="card-header">
+          <h3 class="card-title">Environmental Metrics</h3>
+          <div class="card-meta">Package: #SPK-901234 | 12:48 PM | Feb 24, 2024</div>
         </div>
-        <!-- Removed per user request -->
+        
+        <div class="slider-container">
+          <div class="slider-tooltip" id="ammonia-tooltip">4.8 ppm</div>
+          <input type="range" id="ammonia-slider" min="0" max="50" step="0.1" value="4.8">
+          <div class="slider-ticks">
+            <span>0</span>
+            <span>10</span>
+            <span>20</span>
+            <span>30</span>
+            <span>40</span>
+            <span>50</span>
+          </div>
+        </div>
+        
+        <div class="slider-footer">
+          Ammonia Level: <span id="ammonia-val-text">4.8 ppm</span> <span class="status-safe">(SAFE - range 0-50 ppm)</span>
+        </div>
       </div>
     </div>
 
     <!-- Scan Summary (hidden until scan) -->
-    <div class="scan-summary glass-card hidden" id="scan-summary">
-      <div class="scan-summary__title">📋 Scan Summary</div>
-
-      <!-- Package Info from QR -->
-      <div style="font-size:0.72rem; font-weight:700; color:var(--accent-indigo); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">📱 Package Info (from QR)</div>
-      <div class="summary-grid" style="margin-bottom:1.25rem;">
-        <div class="summary-item">
-          <div class="summary-item__label">🏷️ Batch ID</div>
-          <div class="summary-item__value" id="sum-batch">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-item__label">📦 Product ID</div>
-          <div class="summary-item__value" id="sum-product">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-item__label">📅 Packaging Time</div>
-          <div class="summary-item__value" id="sum-packtime">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-item__label">🌡️ Initial Temp</div>
-          <div class="summary-item__value" id="sum-inittemp">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-item__label">📍 Location</div>
-          <div class="summary-item__value" id="sum-location">—</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-item__label">📝 Notes</div>
-          <div class="summary-item__value" id="sum-notes">—</div>
-        </div>
-      </div>
-
-      <!-- Computed & Sensor Data -->
-      <div style="font-size:0.72rem; font-weight:700; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">🔬 Live Data & Analysis</div>
+    <div class="card hidden" id="scan-summary">
+      <h3 class="card-title" style="margin-bottom: 1.5rem;">📋 Scan Summary</h3>
       <div class="summary-grid">
-        <div class="summary-item">
-          <div class="summary-item__label">⏱️ Storage Time</div>
-          <div class="summary-item__value" id="sum-storage">—</div>
-          <div class="summary-item__detail" id="sum-storage-detail"></div>
+        <div class="data-group">
+          <div class="data-label">Batch ID</div>
+          <div class="data-value" id="sum-batch">—</div>
         </div>
-        <div class="summary-item">
-          <div class="summary-item__label">🎨 Biofilm Color</div>
-          <div class="summary-item__value" id="sum-biofilm">—</div>
-          <div class="summary-item__detail" id="sum-biofilm-detail"></div>
+        <div class="data-group">
+          <div class="data-label">Product</div>
+          <div class="data-value" id="sum-product">—</div>
         </div>
-        <div class="summary-item">
-          <div class="summary-item__label">🧪 Estimated pH</div>
-          <div class="summary-item__value" id="sum-ph">—</div>
-          <div class="summary-item__detail" id="sum-ph-detail"></div>
+        <div class="data-group">
+          <div class="data-label">Packaging Time</div>
+          <div class="data-value" id="sum-packtime">—</div>
         </div>
-        <div class="summary-item">
-          <div class="summary-item__label">💨 Ammonia (Firebase)</div>
-          <div class="summary-item__value" id="sum-ammonia">—</div>
+        <div class="data-group">
+          <div class="data-label">Initial Temp</div>
+          <div class="data-value" id="sum-inittemp">—</div>
         </div>
-        <div class="summary-item">
-          <div class="summary-item__label">🌡️ Temp (Firebase)</div>
-          <div class="summary-item__value" id="sum-temp">—</div>
+        <div class="data-group">
+          <div class="data-label">Location</div>
+          <div class="data-value" id="sum-location">—</div>
         </div>
-        <div class="summary-item">
-          <div class="summary-item__label">💧 Humidity (Firebase)</div>
-          <div class="summary-item__value" id="sum-humidity">—</div>
+        <div class="data-group">
+          <div class="data-label">Notes</div>
+          <div class="data-value" id="sum-notes">—</div>
+          <div class="data-sub">Custom remarks</div>
+        </div>
+
+        <div class="data-group" style="border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+          <div class="data-label">Storage Duration</div>
+          <div class="data-value" id="sum-storage">—</div>
+          <div class="data-sub" id="sum-storage-detail">Time since packaging</div>
+        </div>
+        <div class="data-group" style="border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+          <div class="data-label">Biofilm Color</div>
+          <div class="data-value" id="sum-biofilm">—</div>
+          <div class="data-sub" id="sum-biofilm-detail">—</div>
+        </div>
+        <div class="data-group">
+          <div class="data-label">Estimated pH</div>
+          <div class="data-value" id="sum-ph">—</div>
+          <div class="data-sub" id="sum-ph-detail">—</div>
+        </div>
+        <div class="data-group">
+          <div class="data-label">Ammonia (Live)</div>
+          <div class="data-value" id="sum-ammonia">—</div>
+          <div class="data-sub">From sensor data</div>
+        </div>
+        <div class="data-group">
+          <div class="data-label">Temperature (Live)</div>
+          <div class="data-value" id="sum-temp">—</div>
+          <div class="data-sub">From sensor data</div>
+        </div>
+        <div class="data-group">
+          <div class="data-label">Humidity (Live)</div>
+          <div class="data-value" id="sum-humidity">—</div>
+          <div class="data-sub">From sensor data</div>
         </div>
       </div>
     </div>
 
-    <!-- Result Panel (hidden until prediction) -->
-    <div class="result-panel glass-card hidden" id="result-panel">
-      <div class="result-panel__title">🦐 Freshness Prediction</div>
-
+    <!-- Prediction Result (hidden until scan) -->
+    <div class="card result-panel hidden" id="result-panel">
       <div class="status-badge" id="status-badge">
-        <span class="status-badge__icon" id="status-icon"></span>
-        <span id="status-label"></span>
+        <div class="icon" id="status-icon">⚠️</div>
+        <div id="status-label">CAUTION</div>
       </div>
       
-      <div style="margin-top: 1rem; padding: 1rem; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border-left: 4px solid var(--accent-indigo); font-size: 0.85rem; line-height: 1.5; color: var(--ink);">
-        <strong>Action:</strong> <span id="recommended-action">—</span>
+      <div class="confidence-container">
+        <div class="confidence-title">AI Confidence Breakdown</div>
+        <div class="bar-row">
+          <div class="bar-label">SAFE</div>
+          <div class="bar-track"><div class="bar-fill bar-fill--safe" id="bar-safe" style="width: 0%"></div></div>
+          <div class="bar-value" id="conf-safe">0%</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">CAUTION</div>
+          <div class="bar-track"><div class="bar-fill bar-fill--caution" id="bar-caution" style="width: 0%"></div></div>
+          <div class="bar-value" id="conf-caution">0%</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">UNSAFE</div>
+          <div class="bar-track"><div class="bar-fill bar-fill--unsafe" id="bar-unsafe" style="width: 0%"></div></div>
+          <div class="bar-value" id="conf-unsafe">0%</div>
+        </div>
       </div>
 
-      <div class="confidence-section">
-        <div class="confidence-section__title">Confidence Scores</div>
-        <div class="confidence-bar confidence-bar--safe">
-          <div class="confidence-bar__header">
-            <span class="confidence-bar__label">✅ Safe</span>
-            <span class="confidence-bar__value" id="conf-safe">—</span>
-          </div>
-          <div class="confidence-bar__track"><div class="confidence-bar__fill" id="bar-safe"></div></div>
-        </div>
-        <div class="confidence-bar confidence-bar--caution">
-          <div class="confidence-bar__header">
-            <span class="confidence-bar__label">⚠️ Caution</span>
-            <span class="confidence-bar__value" id="conf-caution">—</span>
-          </div>
-          <div class="confidence-bar__track"><div class="confidence-bar__fill" id="bar-caution"></div></div>
-        </div>
-        <div class="confidence-bar confidence-bar--unsafe">
-          <div class="confidence-bar__header">
-            <span class="confidence-bar__label">🚫 Unsafe</span>
-            <span class="confidence-bar__value" id="conf-unsafe">—</span>
-          </div>
-          <div class="confidence-bar__track"><div class="confidence-bar__fill" id="bar-unsafe"></div></div>
-        </div>
+      <div class="recommendation">
+        <strong>Recommendation:</strong> <span id="recommended-action">—</span>
       </div>
-      <button class="btn" style="margin-top: 1.5rem; width: 100%;" onclick="resetScanner()">🔄 Scan Another Package</button>
+      
+      <button class="btn btn-secondary" style="margin-top: 2rem; width: auto; padding: 10px 24px;" onclick="resetScanner()">Scan Another Package</button>
     </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <a href="qr-generator.html" style="color: #818cf8; text-decoration: none;">📱 Generate Package QR Codes</a>
-    </footer>
 
   </div>
 
-  <!-- Toasts -->
   <div class="error-toast" id="error-toast"></div>
   <div class="info-toast" id="info-toast"></div>
 
-  <script src="app.js"></script>
 </body>
 </html>

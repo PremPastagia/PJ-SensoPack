@@ -20,13 +20,18 @@ const dom = {
   video:          document.getElementById("camera-video"),
   canvas:         document.getElementById("camera-canvas"),
   cameraOverlay:  document.getElementById("camera-overlay"),
-  cameraPanel:    document.getElementById("camera-panel"),
+  cameraPanel:    document.getElementById("camera-wrapper"),
   scanBtn:        document.getElementById("scan-btn"),
 
-  // Demo
-  demoToggle:     document.getElementById("demo-mode-toggle"),
+  // File Upload
+  imageUpload:    document.getElementById("image-upload"),
 
-  // Summary - QR Info
+  // Manual Inputs
+  ammoniaSlider:  document.getElementById("ammonia-slider"),
+  ammoniaVal:     document.getElementById("ammonia-val-text"),
+  ammoniaTooltip: document.getElementById("ammonia-tooltip"),
+
+  // Summary Fields
   scanSummary:    document.getElementById("scan-summary"),
   sumBatch:       document.getElementById("sum-batch"),
   sumProduct:     document.getElementById("sum-product"),
@@ -281,9 +286,18 @@ const UIManager = {
     const slider = document.getElementById("ammonia-slider");
     const valDisplay = document.getElementById("ammonia-val");
     if (slider && valDisplay) {
-      slider.addEventListener("input", (e) => {
-        valDisplay.textContent = parseFloat(e.target.value).toFixed(1) + " ppm";
-      });
+      dom.ammoniaSlider.addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value).toFixed(1);
+      dom.ammoniaVal.textContent = `${val} ppm`;
+      
+      if (dom.ammoniaTooltip) {
+        dom.ammoniaTooltip.textContent = `${val} ppm`;
+        const percent = (e.target.value - e.target.min) / (e.target.max - e.target.min);
+        // Map 0-1 to something like 2% - 98% to stay within thumb bounds
+        const mappedPos = percent * 96 + 2;
+        dom.ammoniaTooltip.style.left = `calc(${mappedPos}% - 0px)`;
+      }
+    });
     }
 
     const fileInput = document.getElementById("image-upload");
