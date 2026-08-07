@@ -122,12 +122,28 @@ def predict(req: PredictRequest):
             status = "SAFE"
             action = "Product is within safe freshness bounds."
 
+        # Calculate faux 3-class confidence for the UI
+        unsafe_score = spoilage_prob
+        safe_score = 1.0 - spoilage_prob
+        caution_score = 0.0
+        
+        # Peak caution around 0.4
+        if 0.2 < spoilage_prob < 0.6:
+            caution_score = 0.4 - abs(spoilage_prob - 0.4)
+            
+        total = safe_score + caution_score + unsafe_score
+
         return {
             "prediction": status,
             "status": "Spoiled" if status == "UNSAFE" else "Fresh",
             "spoilage_probability": round(spoilage_prob, 4),
             "sensor_data_used": sensor_data_used,
-            "recommended_action": action
+            "recommended_action": action,
+            "confidence_scores": {
+                "SAFE": safe_score / total,
+                "CAUTION": caution_score / total,
+                "UNSAFE": unsafe_score / total
+            }
         }
         
     except Exception as e:
