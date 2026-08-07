@@ -113,36 +113,32 @@ def predict(req: PredictRequest):
         
         # 4. ML INFERENCE
         probs = predict_proba(features)
-        spoilage_prob = float(probs[1]) # Prob of Class 1
+        safe_score = float(probs[0])
+        caution_score = float(probs[1])
+        unsafe_score = float(probs[2])
         
-        if spoilage_prob > 0.40:
+        # Determine main prediction based on highest probability
+        max_prob = max(safe_score, caution_score, unsafe_score)
+        if max_prob == unsafe_score:
             status = "UNSAFE"
             action = "Product shows spoilage markers. Discard immediately."
+        elif max_prob == caution_score:
+            status = "CAUTION"
+            action = "Product is nearing spoilage threshold. Consume immediately or verify manually."
         else:
             status = "SAFE"
             action = "Product is within safe freshness bounds."
 
-        # Calculate faux 3-class confidence for the UI
-        unsafe_score = spoilage_prob
-        safe_score = 1.0 - spoilage_prob
-        caution_score = 0.0
-        
-        # Peak caution around 0.4
-        if 0.2 < spoilage_prob < 0.6:
-            caution_score = 0.4 - abs(spoilage_prob - 0.4)
-            
-        total = safe_score + caution_score + unsafe_score
-
         return {
             "prediction": status,
-            "status": "Spoiled" if status == "UNSAFE" else "Fresh",
-            "spoilage_probability": round(spoilage_prob, 4),
+            "status": "Spoiled" if status == "UNSAFE" else ("Caution" if status == "CAUTION" else "Fresh"),
+            "spoilage_probability": round(unsafe_score, 4),
             "sensor_data_used": sensor_data_used,
             "recommended_action": action,
             "confidence_scores": {
-                "SAFE": safe_score / total,
-                "CAUTION": caution_score / total,
-                "UNSAFE": unsafe_score / total
+                "SAFE": safe_score,
+                "CAUTION": caution_score,
+                "UNSAFE": unsafe_score
             }
         }
         

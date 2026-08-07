@@ -20,12 +20,16 @@ import math
 """ + code + """
 
 def predict_proba(input_features):
-    # m2cgen score function
-    score = score(input_features)
-    # Convert log-odds to probability of class 1
-    # XGBoost binary classification margin -> sigmoid
-    prob_class_1 = 1.0 / (1.0 + math.exp(-score))
-    return [1.0 - prob_class_1, prob_class_1]
+    # m2cgen score function returns raw margins for each class
+    scores = score(input_features)
+    
+    # Softmax conversion
+    max_score = max(scores)
+    exp_scores = [math.exp(s - max_score) for s in scores]
+    sum_exp = sum(exp_scores)
+    
+    probs = [e / sum_exp for e in exp_scores]
+    return probs
 """
 
 with open('api/xgb_model.py', 'w') as f:

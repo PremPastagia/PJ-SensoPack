@@ -34,11 +34,16 @@ else:
     mq_raw = np.clip(100 + (spoilage_factor * 800) + np.random.normal(0, 50, n_samples), 0, 1023)
     ph_level = np.clip(6.5 + (spoilage_factor * 2.5) + np.random.normal(0, 0.2, n_samples), 5.0, 9.0)
     
-    # 0 = Fresh, 1 = Spoiled. Enforce 62.6% Fresh vs 37.4% Not Fresh roughly
-    # We will sort by spoilage factor and assign the top 37.4% to Spoiled
+    # 0 = Safe, 1 = Caution, 2 = Spoiled.
+    # We will sort by spoilage factor and use percentiles to assign classes.
+    # E.g. Safe = Bottom 50%, Caution = 50%-75%, Spoiled = Top 25%
     df_temp = pd.DataFrame({'mq_raw': mq_raw, 'ph_level': ph_level, 'spoilage_factor': spoilage_factor})
-    threshold = df_temp['spoilage_factor'].quantile(0.626)
-    status = (spoilage_factor > threshold).astype(int)
+    threshold_caution = df_temp['spoilage_factor'].quantile(0.50)
+    threshold_spoiled = df_temp['spoilage_factor'].quantile(0.75)
+    
+    status = np.zeros(n_samples, dtype=int)
+    status[spoilage_factor > threshold_caution] = 1
+    status[spoilage_factor > threshold_spoiled] = 2
     
     df = pd.DataFrame({
         'temp': temp,
@@ -76,7 +81,10 @@ clf = xgb.XGBClassifier(
     max_depth=5,
     learning_rate=0.1,
     random_state=42,
-    eval_metric='logloss'
+    objective='multi:softprob',
+    num_class=3,
+    eval_metric='mlogloss',
+    num_parallel_tree=1
 )
 
 clf.fit(X_train, y_train)
