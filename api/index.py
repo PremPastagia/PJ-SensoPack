@@ -17,15 +17,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Pure Python XGBoost Model
+# Load Pure Python Random Forest Model
 import sys
 sys.path.append(os.path.dirname(__file__))
 
 try:
-    from xgb_model import predict_proba
+    from rf_model import predict_proba
 except ImportError:
     try:
-        from api.xgb_model import predict_proba
+        from api.rf_model import predict_proba
     except ImportError as e:
         print(f"Model Import Error: {e}")
         predict_proba = None
@@ -114,7 +114,7 @@ def predict(req: PredictRequest):
         # 3. FEATURE ENGINEERING
         degree_hours = temp * time_exposed
         
-        # Features matching train_xgboost.py: ['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level', 'degree_hours']
+        # Features matching train_rf.py: ['temp', 'humidity', 'mq_raw', 'time_exposed_hours', 'ph_level', 'degree_hours']
         features = [temp, humidity, mq_raw, time_exposed, ph_level, degree_hours]
         
         # 4. ML INFERENCE
