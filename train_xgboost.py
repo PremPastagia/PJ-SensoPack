@@ -24,7 +24,8 @@ else:
     n_samples = 1000
     np.random.seed(42)
     
-    temp = np.random.uniform(-5, 40, n_samples)
+    # ESF dataset was recorded at room temperature (25°C)
+    temp = np.full(n_samples, 25.0)
     humidity = np.random.uniform(40, 100, n_samples)
     time_exposed = np.random.uniform(0.5, 72, n_samples)
     
@@ -33,8 +34,11 @@ else:
     mq_raw = np.clip(100 + (spoilage_factor * 800) + np.random.normal(0, 50, n_samples), 0, 1023)
     ph_level = np.clip(6.5 + (spoilage_factor * 2.5) + np.random.normal(0, 0.2, n_samples), 5.0, 9.0)
     
-    # 0 = Fresh, 1 = Spoiled. Spoiled if mq_raw > 500 or ph > 7.8 or (temp > 25 and time > 4)
-    status = ((mq_raw > 400) | (ph_level > 7.6) | ((temp > 20) & (time_exposed > 6))).astype(int)
+    # 0 = Fresh, 1 = Spoiled. Enforce 62.6% Fresh vs 37.4% Not Fresh roughly
+    # We will sort by spoilage factor and assign the top 37.4% to Spoiled
+    df_temp = pd.DataFrame({'mq_raw': mq_raw, 'ph_level': ph_level, 'spoilage_factor': spoilage_factor})
+    threshold = df_temp['spoilage_factor'].quantile(0.626)
+    status = (spoilage_factor > threshold).astype(int)
     
     df = pd.DataFrame({
         'temp': temp,
@@ -54,6 +58,16 @@ print("Engineering features (degree_hours)...")
 X['degree_hours'] = X['temp'] * X['time_exposed_hours']
 
 # 3. Train XGBoost
+print("Applying SMOTE for class balancing...")
+try:
+    from imblearn.over_sampling import SMOTE
+    smote = SMOTE(random_state=42)
+    X, y = smote.fit_resample(X, y)
+    print("SMOTE applied successfully. New class distribution:")
+    print(y.value_counts())
+except ImportError:
+    print("imbalanced-learn not installed, skipping SMOTE.")
+
 print("Training XGBoost Classifier...")
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
