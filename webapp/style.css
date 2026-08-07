@@ -186,6 +186,7 @@ body {
 }
 input[type=range] {
   -webkit-appearance: none; width: 100%; background: transparent;
+  --val: 9.6%; /* (4.8 / 50) */
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
@@ -193,7 +194,7 @@ input[type=range]::-webkit-slider-thumb {
   box-shadow: 0 0 0 3px white, 0 0 0 4px var(--border-light);
 }
 input[type=range]::-webkit-slider-runnable-track {
-  width: 100%; height: 4px; background: linear-gradient(to right, var(--accent-indigo) 10%, var(--border-light) 10%);
+  width: 100%; height: 4px; background: linear-gradient(to right, var(--accent-indigo) var(--val), var(--border-light) var(--val));
   border-radius: 2px;
 }
 .slider-ticks {

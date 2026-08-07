@@ -317,6 +317,9 @@ const UIManager = {
         // Map 0-1 to something like 2% - 98% to stay within thumb bounds
         const mappedPos = percent * 96 + 2;
         dom.ammoniaTooltip.style.left = `calc(${mappedPos}% - 0px)`;
+        
+        // Update the slider track fill
+        dom.ammoniaSlider.style.setProperty('--val', `${percent * 100}%`);
       }
     });
     }
