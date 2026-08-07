@@ -26,12 +26,19 @@ const dom = {
   // File Upload
   imageUpload:    document.getElementById("image-upload"),
 
-  // Manual Inputs
-  metricsCard:    document.getElementById("metrics-card"),
-  ammoniaSlider:  document.getElementById("ammonia-slider"),
-  ammoniaVal:     document.getElementById("ammonia-val-text"),
-  ammoniaTooltip: document.getElementById("ammonia-tooltip"),
-  ammoniaStatus:  document.getElementById("ammonia-status"),
+  // Manual Inputs (Sandbox)
+  sandboxCard:    document.getElementById("sandbox-card"),
+  sandboxToggle:  document.getElementById("sandbox-toggle"),
+  slAmmonia:      document.getElementById("slider-ammonia"),
+  slPh:           document.getElementById("slider-ph"),
+  slTemp:         document.getElementById("slider-temp"),
+  slHumidity:     document.getElementById("slider-humidity"),
+  slStorage:      document.getElementById("slider-storage"),
+  valAmmonia:     document.getElementById("val-ammonia"),
+  valPh:          document.getElementById("val-ph"),
+  valTemp:        document.getElementById("val-temp"),
+  valHumidity:    document.getElementById("val-humidity"),
+  valStorage:     document.getElementById("val-storage"),
 
   // Summary Fields
   scanSummary:    document.getElementById("scan-summary"),
@@ -291,48 +298,46 @@ const BiofilmAnalyzer = {
 // ═══════════════════════════════════════════════════════════
 const UIManager = {
   init() {
-    if (dom.ammoniaSlider && dom.ammoniaVal) {
-      dom.ammoniaSlider.addEventListener("input", (e) => {
-      const val = parseFloat(e.target.value).toFixed(1);
-      dom.ammoniaVal.textContent = `${val} ppm`;
-      
-      if (dom.ammoniaStatus) {
-        dom.ammoniaStatus.className = ""; // clear classes
-        if (val < 20) {
-          dom.ammoniaStatus.textContent = "(SAFE)";
-          dom.ammoniaStatus.classList.add("status-safe");
-        } else if (val < 35) {
-          dom.ammoniaStatus.textContent = "(CAUTION)";
-          dom.ammoniaStatus.style.color = "var(--caution-text)"; // using inline style since we don't have a status-caution class for text in light theme
-        } else {
-          dom.ammoniaStatus.textContent = "(DANGEROUS)";
-          dom.ammoniaStatus.style.color = "var(--unsafe-text)";
-        }
-      }
-
-      if (dom.ammoniaTooltip) {
-        dom.ammoniaTooltip.textContent = `${val} ppm`;
-        const percent = (e.target.value - e.target.min) / (e.target.max - e.target.min);
-        // Map 0-1 to something like 2% - 98% to stay within thumb bounds
-        const mappedPos = percent * 96 + 2;
-        dom.ammoniaTooltip.style.left = `calc(${mappedPos}% - 0px)`;
+    // Setup Sandbox Toggle
+    if (dom.sandboxToggle) {
+      dom.sandboxToggle.addEventListener("change", (e) => {
+        const isSandbox = e.target.checked;
+        dom.slPh.disabled = !isSandbox;
+        dom.slTemp.disabled = !isSandbox;
+        dom.slHumidity.disabled = !isSandbox;
+        dom.slStorage.disabled = !isSandbox;
         
-        // Update the slider track fill
-        dom.ammoniaSlider.style.setProperty('--val', `${percent * 100}%`);
-      }
-    });
-    
-    dom.ammoniaSlider.addEventListener("change", (e) => {
-      // Re-trigger prediction if we already have scan data
-      if (lastScanData) {
-        executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs)
-          .catch(err => {
-            console.error("Re-prediction error:", err);
-            showError("Failed to update prediction with new ammonia level.");
-          });
-      }
-    });
+        if (lastScanData) {
+          executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs).catch(console.error);
+        }
+      });
     }
+
+    // Setup Slider Listeners
+    const bindSlider = (slider, valDisplay, suffix) => {
+      if (!slider) return;
+      slider.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        valDisplay.textContent = `${val} ${suffix}`;
+        const percent = (val - slider.min) / (slider.max - slider.min);
+        slider.style.setProperty('--val', `${percent * 100}%`);
+      });
+      slider.addEventListener("change", (e) => {
+        if (lastScanData) {
+          executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs)
+            .catch(err => {
+              console.error("Re-prediction error:", err);
+              showError("Failed to update prediction with new sandbox level.");
+            });
+        }
+      });
+    };
+
+    bindSlider(dom.slAmmonia, dom.valAmmonia, "ppm");
+    bindSlider(dom.slPh, dom.valPh, "");
+    bindSlider(dom.slTemp, dom.valTemp, "°C");
+    bindSlider(dom.slHumidity, dom.valHumidity, "%");
+    bindSlider(dom.slStorage, dom.valStorage, "hrs");
 
     const fileInput = document.getElementById("image-upload");
     if (fileInput) {
@@ -448,14 +453,19 @@ async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
   // Save scan data so slider can re-trigger
   lastScanData = { qrResult, biofilmResult, storageHrs };
   
-  const ammoniaSlider = document.getElementById("ammonia-slider");
-  const ammoniaVal = ammoniaSlider ? parseFloat(ammoniaSlider.value) : 0.0;
+  const isSandbox = dom.sandboxToggle && dom.sandboxToggle.checked;
+  const ammoniaVal = dom.slAmmonia ? parseFloat(dom.slAmmonia.value) : 0.0;
 
   const payload = {
-    ph_level: biofilmResult.ph,
-    storage_time_hrs: storageHrs,
+    ph_level: isSandbox ? parseFloat(dom.slPh.value) : biofilmResult.ph,
+    storage_time_hrs: isSandbox ? parseFloat(dom.slStorage.value) : storageHrs,
     ammonia_ppm: ammoniaVal
   };
+  
+  if (isSandbox) {
+    payload.temperature_c = parseFloat(dom.slTemp.value);
+    payload.humidity_pct = parseFloat(dom.slHumidity.value);
+  }
 
   console.log("Payload to API:", payload);
   dom.scanBtn.textContent = "🧠 Fetching Live Data & Predicting...";
@@ -478,8 +488,22 @@ async function executeScanPayload(qrResult, biofilmResult, storageHrs) {
   
   dom.scanSummary.classList.remove("hidden");
   dom.resultPanel.classList.remove("hidden");
-  if (dom.metricsCard) {
-    dom.metricsCard.classList.remove("hidden");
+  if (!isSandbox && result.sensor_data_used) {
+    const setSlider = (slider, valDisp, val, suffix) => {
+      if (!slider) return;
+      slider.value = val;
+      valDisp.textContent = `${Number(val).toFixed(1)} ${suffix}`;
+      const percent = (val - slider.min) / (slider.max - slider.min);
+      slider.style.setProperty('--val', `${percent * 100}%`);
+    };
+    setSlider(dom.slPh, dom.valPh, biofilmResult.ph, "");
+    setSlider(dom.slTemp, dom.valTemp, result.sensor_data_used.temp_c, "°C");
+    setSlider(dom.slHumidity, dom.valHumidity, result.sensor_data_used.humidity, "%");
+    setSlider(dom.slStorage, dom.valStorage, storageHrs, "hrs");
+  }
+
+  if (dom.sandboxCard) {
+    dom.sandboxCard.classList.remove("hidden");
   }
 }
 

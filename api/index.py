@@ -56,6 +56,8 @@ class PredictRequest(BaseModel):
     ph_level: float
     storage_time_hrs: float
     ammonia_ppm: float
+    temperature_c: float = None
+    humidity_pct: float = None
 
 @app.get("/api/health")
 def health_check():
@@ -65,22 +67,30 @@ def health_check():
 def predict(req: PredictRequest):
     if not model:
         raise HTTPException(status_code=500, detail="ML Model not loaded")
-    if not firebase_initialized:
-        raise HTTPException(status_code=500, detail="Firebase not configured")
         
     try:
-        # 1. Fetch latest sensor data from Firebase
-        ref = db.reference('sensor_state')
-        sensor_data = ref.get()
-        
-        if not sensor_data:
-            raise HTTPException(status_code=404, detail="No sensor data found in Firebase. Ensure the Arduino is connected and running.")
+        # Determine Temperature and Humidity
+        if req.temperature_c is not None and req.humidity_pct is not None:
+            # Sandbox Mode: Use provided values
+            temp = req.temperature_c
+            humidity = req.humidity_pct
+        else:
+            # Sensor Mode: Fetch from Firebase
+            if not firebase_initialized:
+                raise HTTPException(status_code=500, detail="Firebase not configured")
+                
+            ref = db.reference('sensor_state')
+            sensor_data = ref.get()
             
-        if 'temp_c' not in sensor_data or 'humidity' not in sensor_data:
-            raise HTTPException(status_code=400, detail="Missing temperature or humidity data from Arduino.")
+            if not sensor_data:
+                raise HTTPException(status_code=404, detail="No sensor data found in Firebase. Ensure the Arduino is connected and running.")
+                
+            if 'temp_c' not in sensor_data or 'humidity' not in sensor_data:
+                raise HTTPException(status_code=400, detail="Missing temperature or humidity data from Arduino.")
+                
+            temp = float(sensor_data['temp_c'])
+            humidity = float(sensor_data['humidity'])
             
-        temp = float(sensor_data['temp_c'])
-        humidity = float(sensor_data['humidity'])
         ammonia = req.ammonia_ppm
         
         # Model expects: ['ammonia_ppm' 'ph_level' 'temperature_c' 'storage_time_hrs' 'humidity_pct']
