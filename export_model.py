@@ -2,17 +2,18 @@ import joblib
 import m2cgen as m2c
 
 print("Loading model...")
-clf = joblib.load('shrimp_spoilage_model_rf.joblib')
+clf = joblib.load('shrimp_spoilage_model_xgb.joblib')
 
 print("Generating Python code...")
 code = m2c.export_to_python(clf)
 
-# m2cgen's export_to_python() for a RandomForestClassifier already sums
-# each tree's per-class probability vector and divides by n_estimators --
-# score() returns the exact same normalized [p_safe, p_caution, p_unsafe]
-# vector as clf.predict_proba() (verified empirically against the trained
-# model, not assumed). No further transform is needed; predict_proba is
-# just a thin pass-through, kept for API naming clarity.
+# We want predict_proba so we can threshold at 0.40.
+# m2cgen's export_to_python() for a multi:softprob XGBClassifier already
+# applies softmax internally and returns normalized class probabilities
+# directly from score() -- it does NOT return raw margins needing another
+# softmax. Applying softmax a second time flattens confident predictions
+# toward a uniform distribution (e.g. 99.8% -> 57.6%), silently corrupting
+# every confidence score without ever raising an error.
 wrapper_code = """
 import math
 
@@ -22,7 +23,7 @@ def predict_proba(input_features):
     return score(input_features)
 """
 
-with open('api/rf_model.py', 'w') as f:
+with open('api/xgb_model.py', 'w') as f:
     f.write(wrapper_code)
 
-print("Exported pure Python model to api/rf_model.py!")
+print("Exported pure Python model to api/xgb_model.py!")

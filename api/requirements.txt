@@ -1,3 +1,8 @@
 fastapi==0.104.1
 uvicorn==0.24.0
 firebase-admin==6.3.0
+joblib
+scikit-learn
+pandas
+numpy
+scipy

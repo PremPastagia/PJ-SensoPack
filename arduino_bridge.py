@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 import time
 import json
 import firebase_admin
@@ -6,14 +7,29 @@ from firebase_admin import credentials, db
 import os
 import sys
 
-# Configuration
-SERIAL_PORT = 'COM12'
-BAUD_RATE = 9600
-FIREBASE_DB_URL = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.asia-southeast1.firebasedatabase.app/')
-
 print("=========================================")
 print("  SensoPack Arduino -> Firebase Bridge   ")
 print("=========================================")
+
+# Configuration
+BAUD_RATE = 9600
+FALLBACK_PORT = 'COM12'
+FIREBASE_DB_URL = os.environ.get('FIREBASE_URL', 'https://pj-sensopack-default-rtdb.asia-southeast1.firebasedatabase.app/')
+
+def find_serial_port():
+    ports = list(serial.tools.list_ports.comports())
+    for port in ports:
+        desc = port.description.lower()
+        hwid = port.hwid.lower()
+        if any(x in desc or x in hwid for x in ["arduino", "ch340", "usb", "serial", "ftdi", "cp210"]):
+            print(f"[Auto-detect] Found microcontroller on port: {port.device} ({port.description})")
+            return port.device
+    return None
+
+detected_port = find_serial_port()
+SERIAL_PORT = detected_port if detected_port else FALLBACK_PORT
+if not detected_port:
+    print(f"[Warning] No microcontroller auto-detected. Falling back to: {FALLBACK_PORT}")
 
 # 1. Initialize Firebase
 cred_path = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
@@ -52,10 +68,20 @@ print("Waiting for data...")
 try:
     while True:
         # Request data (SensoPack protocol expects 'R')
-        ser.write(b'R')
+        try:
+            ser.write(b'R')
+        except Exception as e:
+            print(f"Error writing to serial: {e}")
+            time.sleep(2)
+            continue
         
-        # Read response
-        line = ser.readline().decode('utf-8').strip()
+        # Read response and protect against decoding errors or corrupt lines
+        try:
+            raw_line = ser.readline()
+            line = raw_line.decode('utf-8', errors='ignore').strip()
+        except Exception as e:
+            print(f"Error reading/decoding serial data: {e}")
+            continue
         
         if line and not line.startswith('#'):
             try:

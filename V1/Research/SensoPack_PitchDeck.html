@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SensoPack — Pitch Deck</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--bg:#eceff0;--panel:#ffffff;--panel2:#f5f8f7;--ink:#1c2a30;--ink2:#54646c;--ink3:#8a9aa0;
+  --teal:#0d5f66;--teal2:#12868a;--green:#2e8b52;--amber:#c06a1c;--red:#b23b3b;--line:#d5dfdb;--line2:#e6ece9;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,sans-serif;overflow:hidden;}
+.deck{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;padding:36px 56px 54px;opacity:0;transform:translateY(18px);
+  transition:opacity .4s ease,transform .4s ease;pointer-events:none;display:flex;flex-direction:column;overflow:hidden;}
+.slide.active{opacity:1;transform:translateY(0);pointer-events:all;}
+.slide::before{content:'';position:absolute;top:0;left:0;height:5px;width:100%;background:linear-gradient(90deg,var(--teal),var(--green) 55%,var(--amber));}
+.shead{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:13px;flex-shrink:0;}
+.shead .t{display:flex;flex-direction:column;}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);}
+.shead h2{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-top:3px;line-height:1.1;}
+.shead .num{font-size:12px;color:var(--ink3);font-weight:600;}
+.body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;}
+.lead{font-size:14.5px;color:var(--ink2);line-height:1.55;max-width:1000px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;}
+.col-7-5{display:grid;grid-template-columns:1.35fr 1fr;gap:22px;align-items:center;}
+.col-5-7{display:grid;grid-template-columns:1fr 1.35fr;gap:22px;align-items:center;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+.card.soft{background:var(--panel2);}
+.card h3{font-size:13.5px;font-weight:700;margin-bottom:5px;color:var(--ink);}
+.card p{font-size:12.3px;color:var(--ink2);line-height:1.46;}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:6px;}
+.tag-teal{color:var(--teal);font-weight:700;}.tag-green{color:var(--green);font-weight:700;}.tag-amber{color:var(--amber);font-weight:700;}.tag-red{color:var(--red);font-weight:700;}
+.stat{font-size:27px;font-weight:800;color:var(--teal);line-height:1;letter-spacing:-.5px;}
+.stat.g{color:var(--green);}.stat.a{color:var(--amber);}
+.slabel{font-size:11.2px;color:var(--ink2);margin-top:5px;line-height:1.38;}
+ul.clean{list-style:none;}
+ul.clean li{position:relative;padding-left:19px;margin:6px 0;font-size:12.4px;line-height:1.42;color:var(--ink);}
+ul.clean li::before{content:'';position:absolute;left:0;top:5px;width:9px;height:9px;border-radius:2px;background:linear-gradient(135deg,var(--teal),var(--green));}
+table{border-collapse:collapse;width:100%;font-size:11.8px;}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top;}
+th{background:var(--teal);color:#fff;font-weight:600;font-size:11px;}
+tr:nth-child(even) td{background:var(--panel2);}
+.callout{background:#f7efe4;border-left:4px solid var(--amber);border-radius:0 8px 8px 0;padding:9px 14px;font-size:12.3px;color:#6a4a1e;line-height:1.48;}
+.callout.teal{background:#e6f2f1;border-color:var(--teal);color:#164a4d;}
+svg{display:block;} svg text{font-family:inherit;}
+.nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:99px;padding:6px 14px;z-index:60;box-shadow:0 6px 18px rgba(20,60,50,.1);}
+.nav button{background:none;border:none;font-size:15px;color:var(--teal);cursor:pointer;padding:2px 7px;border-radius:6px;}
+.nav button:hover{background:var(--panel2);}
+.counter{font-size:11px;color:var(--ink2);min-width:46px;text-align:center;}
+.progress{position:fixed;top:0;left:0;height:5px;background:linear-gradient(90deg,var(--teal),var(--amber));z-index:70;transition:width .35s ease;}
+.brand{position:fixed;bottom:20px;right:24px;font-size:10.5px;color:var(--ink3);z-index:50;}
+.title{align-items:flex-start;justify-content:center;}
+.title .logo{width:62px;height:62px;margin-bottom:18px;}
+.title h1{font-size:58px;font-weight:800;letter-spacing:-1.5px;line-height:1;}
+.title .sub{font-size:18px;color:var(--ink2);max-width:840px;margin-top:15px;line-height:1.5;}
+.title .metas{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap;}
+.title .metas span{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:12.5px;color:var(--ink2);}
+.wm{position:absolute;right:-60px;bottom:-70px;opacity:.06;}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="brand">Team Sentinel · IIT Kharagpur Platinum Jubilee Innovation Challenge · Round 2</div>
+<div class="deck">
+
+<!-- 1 TITLE -->
+<section class="slide title active">
+  <svg class="logo" viewBox="0 0 80 80" fill="none"><path d="M40 5L9 16.5V38C9 55.5 23.4 71.6 40 77C56.6 71.6 71 55.5 71 38V16.5L40 5Z" fill="url(#lg)"/><path d="M27 40l9 9 17-19" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="lg" x1="9" y1="5" x2="71" y2="77"><stop stop-color="#0d5f66"/><stop offset="1" stop-color="#2e8b52"/></linearGradient></defs></svg>
+  <div class="kicker">Deep-Tech Innovation · Food Security &amp; Safety</div>
+  <h1>SensoPack</h1>
+  <p class="sub">Biodegradable smart packaging that actively <b>protects</b> fresh shrimp and <b>senses</b> its true freshness — starting with India's ₹62,408 crore shrimp-export chain, and built to be affordable where refrigeration cannot reach.</p>
+  <div class="metas"><span>Active bio-film + one low-cost freshness sensor</span><span>Beachhead: shrimp · extends to fish &amp; meat</span><span>Protect · Sense · Sustain</span></div>
+  <svg class="wm" width="360" height="360" viewBox="0 0 80 80" fill="none"><path d="M40 5L9 16.5V38C9 55.5 23.4 71.6 40 77C56.6 71.6 71 55.5 71 38V16.5L40 5Z" fill="#0d5f66"/></svg>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">01 · Problem Significance</span><h2>India exports the world's shrimp — and loses a fortune to spoilage</h2></div><span class="num">Criterion 1</span></div>
+  <div class="body">
+    <div class="col-7-5">
+      <div>
+        <svg width="100%" viewBox="0 0 640 240">
+          <text x="0" y="14" font-size="12" font-weight="700" fill="#54646c">WHERE THE VALUE LEAKS — POND TO PORT TO PLATE</text>
+          <rect x="10" y="56" width="620" height="34" rx="6" fill="#e6f2f1" stroke="#bcdcd8"/>
+          <line x1="165" y1="56" x2="165" y2="90" stroke="#bcdcd8"/><line x1="320" y1="56" x2="320" y2="90" stroke="#bcdcd8"/><line x1="475" y1="56" x2="475" y2="90" stroke="#bcdcd8"/>
+          <text x="85" y="78" font-size="12" text-anchor="middle" fill="#164a4d" font-weight="600">Farm / Landing</text>
+          <text x="242" y="78" font-size="12" text-anchor="middle" fill="#164a4d" font-weight="600">Cold store / Transit</text>
+          <text x="397" y="78" font-size="12" text-anchor="middle" fill="#164a4d" font-weight="600">Port / Export</text>
+          <text x="553" y="78" font-size="12" text-anchor="middle" fill="#164a4d" font-weight="600">Retail / Consumer</text>
+          <g fill="#c06a1c"><path d="M110 104 q-8 14 0 22 q8 -8 0 -22Z"/><path d="M250 110 q-9 16 0 25 q9 -9 0 -25Z"/><path d="M400 106 q-10 18 0 28 q10 -10 0 -28Z"/></g>
+          <text x="110" y="152" font-size="11" text-anchor="middle" fill="#c06a1c">melanosis</text>
+          <text x="250" y="160" font-size="11" text-anchor="middle" fill="#c06a1c">thermal excursion</text>
+          <text x="400" y="168" font-size="11" text-anchor="middle" fill="#c06a1c">quality downgrade</text>
+          <text x="320" y="212" font-size="12" text-anchor="middle" fill="#54646c">Shrimp spoils in <tspan font-weight="700" fill="#1c2a30">3–14 days</tspan> by temperature — a static "Best By" label is blind to it</text>
+        </svg>
+      </div>
+      <div>
+        <svg width="100%" viewBox="0 0 320 240">
+          <text x="0" y="14" font-size="11.5" font-weight="700" fill="#54646c">INDIA SHRIMP EXPORT vs LOSS (₹ cr)</text>
+          <line x1="46" y1="38" x2="46" y2="198" stroke="#d5dfdb"/><line x1="46" y1="198" x2="315" y2="198" stroke="#d5dfdb"/>
+          <rect x="80" y="52" width="70" height="146" rx="3" fill="#0d5f66"/><rect x="200" y="163" width="70" height="35" rx="3" fill="#c06a1c"/>
+          <text x="115" y="44" font-size="12.5" text-anchor="middle" font-weight="800" fill="#0d5f66">62,408</text>
+          <text x="235" y="155" font-size="12.5" text-anchor="middle" font-weight="800" fill="#c06a1c">~15,000</text>
+          <text x="115" y="213" font-size="10.5" text-anchor="middle" fill="#54646c">Shrimp export</text>
+          <text x="235" y="213" font-size="10.5" text-anchor="middle" fill="#54646c">Post-harvest loss</text>
+          <text x="180" y="232" font-size="10.3" text-anchor="middle" fill="#8a9aa0">FY 2024–25 · 1.69M MT exported</text>
+        </svg>
+      </div>
+    </div>
+    <div class="grid4" style="margin-top:12px;">
+      <div class="card soft"><div class="stat">69%</div><div class="slabel">of India's seafood dollar earnings come from shrimp</div></div>
+      <div class="card soft"><div class="stat g">$2.71B</div><div class="slabel">India → USA shrimp alone (FY25) — the premium market</div></div>
+      <div class="card soft"><div class="stat a">~35%</div><div class="slabel">of harvested fish/seafood lost globally before a plate</div></div>
+      <div class="card soft"><div class="stat">2 gaps</div><div class="slabel">no active <b>protection</b>; no real-time <b>information</b></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 INSIGHT -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">Clarity of Insight</span><h2>The fixes exist — they never reach the market that needs them</h2></div><span class="num">Criterion 1</span></div>
+  <div class="body">
+    <div class="col-5-7">
+      <div>
+        <svg width="100%" viewBox="0 0 260 240">
+          <text x="130" y="16" font-size="12" font-weight="700" text-anchor="middle" fill="#54646c">WHO THE COLD CHAIN COVERS</text>
+          <g transform="translate(130,118)"><circle r="70" fill="none" stroke="#c06a1c" stroke-width="34"/><path d="M0 -70 A70 70 0 0 1 41 -56" fill="none" stroke="#0d5f66" stroke-width="34"/><circle r="45" fill="#eceff0"/><text y="-3" text-anchor="middle" font-size="26" font-weight="800" fill="#c06a1c">~90%</text><text y="16" text-anchor="middle" font-size="11" fill="#54646c">unrefrigerated</text></g>
+          <g transform="translate(18,214)"><rect width="12" height="12" rx="2" fill="#0d5f66"/><text x="18" y="11" font-size="11" fill="#54646c">Organised / export (~10%)</text></g>
+          <g transform="translate(150,214)"><rect width="12" height="12" rx="2" fill="#c06a1c"/><text x="18" y="11" font-size="11" fill="#54646c">Domestic / informal</text></g>
+        </svg>
+      </div>
+      <div>
+        <div class="grid3">
+          <div class="card"><div class="eyebrow">Fix 1 — too costly</div><h3>Sensor tags &gt; $2.50/unit</h3><p>TrackingPacking-class IoT tags exceed the 5–8% of product value a shrimp pack can bear. Structurally absent from the informal market.</p></div>
+          <div class="card"><div class="eyebrow">Fix 2 — unreadable</div><h3>Needs special scanners</h3><p>Senoptica-type optical labels need industrial readers — a consumer smartphone can't read them at retail.</p></div>
+          <div class="card"><div class="eyebrow">Fix 3 — bolt-on</div><h3>Not packaging-integrated</h3><p>Blakbear-style add-on tags aren't built into the film — extra steps, extra cost. And "Best By" ignores temperature entirely.</p></div>
+        </div>
+        <div class="callout teal" style="margin-top:14px;">The unserved opportunity: an <b>affordable</b>, integrated solution that both <b>extends</b> shrimp freshness and <b>proves</b> it — readable by the naked eye, deployable with no cold storage at all.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 PRODUCT -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">The Product</span><h2>What SensoPack looks like in the customer's hands</h2></div><span class="num">Protect + Sense</span></div>
+  <div class="body">
+    <div class="col-7-5">
+      <div>
+        <svg width="100%" viewBox="0 0 640 340">
+          <defs>
+            <linearGradient id="tray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1f5f3"/><stop offset="1" stop-color="#cdd8d3"/></linearGradient>
+            <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d7e0dc"/><stop offset="1" stop-color="#b7c4be"/></linearGradient>
+            <linearGradient id="film" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d3ece8" stop-opacity=".6"/><stop offset="1" stop-color="#a9dcd6" stop-opacity=".3"/></linearGradient>
+            <linearGradient id="shr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2a48c"/><stop offset="1" stop-color="#e07f5f"/></linearGradient>
+          </defs>
+          <path d="M70 250 L110 155 H430 L470 250 Z" fill="url(#wall)" stroke="#a9b6b0"/>
+          <path d="M110 155 L150 120 H390 L430 155 Z" fill="url(#tray)" stroke="#b7c4be"/>
+          <!-- shrimps -->
+          <g stroke="#c96a4c" stroke-width="1.2">
+            <path d="M180 148 q22 -26 46 -14 q18 10 6 26 q-14 14 -34 6 q-22 -8 -18 -18Z" fill="url(#shr)"/>
+            <path d="M235 152 q24 -24 48 -10 q16 10 3 26 q-16 14 -36 4 q-20 -10 -15 -20Z" fill="url(#shr)"/>
+            <path d="M300 150 q22 -22 44 -8 q15 11 1 25 q-16 13 -34 4 q-18 -10 -12 -21Z" fill="url(#shr)"/>
+          </g>
+          <path d="M110 155 L150 120 H390 L430 155 Z" fill="url(#film)" stroke="#8fd3cf" stroke-width="1"/>
+          <path d="M165 124 L205 152" stroke="#ffffff" stroke-width="3" opacity=".5"/>
+          <!-- sensor label -->
+          <g transform="translate(300,124)">
+            <rect x="0" y="0" width="118" height="46" rx="7" fill="#ffffff" stroke="#d5dfdb"/>
+            <text x="9" y="15" font-size="10" font-weight="800" fill="#0d5f66">SensoPack</text>
+            <path d="M96 10 a8 8 0 0 1 0 12 M101 7 a13 13 0 0 1 0 18" stroke="#12868a" stroke-width="1.6" fill="none"/>
+            <rect x="9" y="24" width="100" height="12" rx="6" fill="url(#anth)"/>
+            <defs><linearGradient id="anth" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b3fa0"/><stop offset=".5" stop-color="#7d8a3a"/><stop offset="1" stop-color="#8a6d2a"/></linearGradient></defs>
+            <circle cx="20" cy="30" r="6" fill="#fff" stroke="#6b3fa0" stroke-width="2.5"/>
+            <text x="9" y="45" font-size="8" fill="#6b3fa0" font-weight="700">FRESH (anthocyanin dye)</text>
+          </g>
+          <!-- phone -->
+          <g transform="translate(500,90)">
+            <rect x="0" y="0" width="110" height="210" rx="18" fill="#1c2a30"/><rect x="7" y="8" width="96" height="194" rx="12" fill="#f5f8f7"/><rect x="42" y="12" width="26" height="5" rx="2.5" fill="#1c2a30"/>
+            <circle cx="55" cy="70" r="26" fill="#efe8f6" stroke="#6b3fa0" stroke-width="2"/><path d="M44 70 l8 8 15 -16" stroke="#6b3fa0" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="55" y="118" font-size="13" font-weight="800" text-anchor="middle" fill="#0d5f66">FRESH</text><text x="55" y="136" font-size="9.5" text-anchor="middle" fill="#54646c">TVB-N low · ~10 days left</text>
+            <rect x="20" y="150" width="70" height="8" rx="4" fill="#e6ece9"/><rect x="20" y="150" width="52" height="8" rx="4" fill="#2e8b52"/><text x="55" y="180" font-size="8" text-anchor="middle" fill="#8a9aa0">tap to re-check</text>
+          </g>
+          <path d="M420 138 q45 -6 78 4" stroke="#12868a" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/><text x="460" y="120" font-size="9.5" fill="#12868a" text-anchor="middle">optional NFC tap</text>
+          <g transform="translate(70,290)" font-size="11">
+            <circle cx="8" cy="8" r="8" fill="#6b3fa0"/><text x="24" y="12" fill="#54646c">Purple — fresh</text>
+            <circle cx="170" cy="8" r="8" fill="#7d8a3a"/><text x="186" y="12" fill="#54646c">Olive — use soon</text>
+            <circle cx="330" cy="8" r="8" fill="#8a6d2a"/><text x="346" y="12" fill="#54646c">Brown — do not consume</text>
+          </g>
+        </svg>
+        <p style="font-size:10.5px;color:#8a9aa0;margin-top:2px;">Product visualisation (concept render — physical unit in development).</p>
+      </div>
+      <div>
+        <div class="card" style="border-left:4px solid var(--green);margin-bottom:11px;"><div class="eyebrow" style="color:var(--green)">Protect</div><h3>Active biodegradable film</h3><p>Chitosan + essential oils (thymol/carvacrol/clove) — an active barrier that <b>doubles shrimp shelf life</b> and works without refrigeration.</p></div>
+        <div class="card" style="border-left:4px solid var(--teal);margin-bottom:11px;"><div class="eyebrow">Sense</div><h3>One &lt;₹5 colour indicator</h3><p>An <b>anthocyanin dye patch</b> (butterfly pea / roselle) that shifts colour with spoilage amines — <b>naked-eye readable, no electronics</b>, optional NFC tap for organised buyers.</p></div>
+        <div class="callout"><b>One decisive sensor, not a stack of five.</b> Cheaper, more robust, genuinely affordable.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 HOW IT WORKS -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">Architecture</span><h2>An affordable base — with a full export-tier platform</h2></div><span class="num">How it works</span></div>
+  <div class="body">
+    <div class="col-7-5">
+      <div>
+        <img src="file:///Users/virajvekariya/Desktop/fig_platform.png" style="width:100%;border:1px solid var(--line);border-radius:12px;"/>
+        <p style="font-size:10.2px;color:#8a9aa0;margin-top:3px;">Full-platform architecture (premium / export tier). The mass-market <b>base tier</b> is the film + ₹5 colour patch only.</p>
+      </div>
+      <div>
+        <div class="card soft" style="margin-bottom:10px;"><div class="eyebrow" style="color:var(--green)">Base tier · mass market</div><p>Active <b>chitosan + EO film</b> + a <b>&lt;₹5 anthocyanin colour patch</b> — naked-eye, no electronics, no battery. What a wet-market vendor actually buys.</p></div>
+        <div class="card soft" style="margin-bottom:10px;"><div class="eyebrow">Premium / export tier · optional</div><p>Adds electronic amine sensing (MIP), an NFC digital freshness certificate, and a time-temperature log — for MPEDA exporters who need a cold-chain audit trail.</p></div>
+        <div class="callout"><b>One decisive signal for everyone; electronics only where the value justifies it.</b> We never force a five-sensor stack onto a ₹200 tray.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 TECHNICAL SOUNDNESS -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">02 · Technical Feasibility &amp; Soundness</span><h2>Measuring the markers regulators already trust</h2></div><span class="num">Criterion 3</span></div>
+  <div class="body">
+    <div class="col-7-5">
+      <div>
+        <img src="file:///Users/virajvekariya/Desktop/fig_cascade.png" style="width:100%;border:1px solid var(--line);border-radius:12px;"/>
+        <p style="font-size:10.2px;color:#8a9aa0;margin-top:3px;">The four-stage shrimp spoilage cascade &amp; accepted biomarker thresholds. Ref: Das &amp; Mishra (2023).</p>
+      </div>
+      <div>
+        <div class="card soft" style="margin-bottom:10px;"><h3 class="tag-green">Protect — established science</h3><ul class="clean" style="margin-top:2px;"><li>Chitosan + EO coatings extend chilled shrimp <b>~8 → 16 days</b> (published)</li><li>Low OTR arrests oxidation &amp; melanosis; balanced WVTR stops drip loss</li><li>Antimicrobials extend the microbial lag phase (stages 3–4)</li></ul></div>
+        <div class="card soft"><h3 class="tag-teal">Sense — the earliest reliable signal</h3><ul class="clean" style="margin-top:2px;"><li>We target <b>stage-3 amines</b> — TVB-N ≥30, TMA ≥3 mg N/100g</li><li>Anthocyanin dye shifts colour with these amines — <b>correlated with TVB-N</b></li><li>Compensated read-out cancels humidity/temperature drift — the deep-tech edge</li></ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 PERFORMANCE -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">Performance</span><h2>Double the shelf life — and flag the exact moment it ends</h2></div><span class="num">Protect × Sense</span></div>
+  <div class="body">
+    <div class="col-7-5">
+      <div>
+        <svg width="100%" viewBox="0 0 620 340">
+          <line x1="60" y1="36" x2="60" y2="310" stroke="#c3cfca"/><line x1="60" y1="310" x2="600" y2="310" stroke="#c3cfca"/>
+          <text x="18" y="176" font-size="11" fill="#54646c" transform="rotate(-90 18,176)">TVB-N (mg/100g)</text>
+          <text x="330" y="336" font-size="11" fill="#54646c" text-anchor="middle">Days in chilled storage →</text>
+          <g font-size="10" fill="#8a9aa0"><text x="60" y="326">0</text><text x="195" y="326">4</text><text x="330" y="326">8</text><text x="465" y="326">12</text><text x="600" y="326">16</text></g>
+          <line x1="60" y1="148" x2="600" y2="148" stroke="#b23b3b" stroke-dasharray="5 4"/><text x="596" y="140" font-size="10.5" text-anchor="end" fill="#b23b3b">30 mg/100g — spoilage limit</text>
+          <!-- control 8d -->
+          <polyline points="60,294 128,267 195,229 262,186 330,148 397,94 465,50" fill="none" stroke="#c06a1c" stroke-width="3"/>
+          <circle cx="330" cy="148" r="4.5" fill="#c06a1c"/>
+          <text x="360" y="110" font-size="11" fill="#c06a1c" font-weight="700">Control</text><text x="360" y="124" font-size="10" fill="#54646c">spoiled ~8 days</text>
+          <!-- sensopack 16d -->
+          <polyline points="60,299 195,267 330,224 465,180 533,159 600,148" fill="none" stroke="#0d5f66" stroke-width="3"/>
+          <circle cx="600" cy="148" r="5.5" fill="#6b3fa0" stroke="#fff" stroke-width="1.5"/>
+          <text x="430" y="298" font-size="11" fill="#0d5f66" font-weight="700">SensoPack (chitosan+EO)</text><text x="430" y="312" font-size="10" fill="#54646c">saleable ~16 days</text>
+          <line x1="600" y1="148" x2="560" y2="96" stroke="#6b3fa0"/><text x="558" y="90" font-size="10.5" text-anchor="end" fill="#6b3fa0" font-weight="700">Dye turns brown at the limit</text>
+          <path d="M330 296 H600" stroke="#12868a" stroke-width="1.4" marker-end="url(#a4)" marker-start="url(#a4s)"/><text x="465" y="290" font-size="10.5" text-anchor="middle" fill="#12868a" font-weight="700">+8 days usable life</text>
+          <defs><marker id="a4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#12868a"/></marker><marker id="a4s" markerWidth="7" markerHeight="7" refX="1" refY="3.5" orient="auto"><path d="M7 0 L0 3.5 L7 7Z" fill="#12868a"/></marker></defs>
+        </svg>
+        <p style="font-size:10.3px;color:#8a9aa0;">Based on published chitosan-EO shrimp shelf-life data (control ~8 d → ~16 d); our validation trials to confirm on Indian supply.</p>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:10px;"><div class="stat g">8 → 16</div><div class="slabel">days of chilled shelf life (published chitosan-EO coatings)</div></div>
+        <div class="card" style="margin-bottom:10px;"><div class="stat">Arrhenius</div><div class="slabel">shelf life: <b>0°C ≈ 14 d · 5°C ≈ 7 d · 10°C ≈ 3–4 d</b> — a fixed date can't capture this</div></div>
+        <div class="card"><div class="stat a">1 dye</div><div class="slabel">flips at the exact TVB-N limit — no false "fresh"</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 ORIGINALITY + COMPETITIVE -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">03 · Originality &amp; Creativity</span><h2>The only solution that both protects and reports — affordably</h2></div><span class="num">Criterion 2</span></div>
+  <div class="body">
+    <div class="col-5-7">
+      <div>
+        <svg width="100%" viewBox="0 0 280 230">
+          <line x1="36" y1="18" x2="36" y2="200" stroke="#c3cfca" marker-end="url(#au)"/><line x1="36" y1="200" x2="268" y2="200" stroke="#c3cfca" marker-end="url(#au)"/>
+          <text x="26" y="110" font-size="10" fill="#54646c" transform="rotate(-90 26,110)">Extends freshness →</text>
+          <text x="150" y="223" font-size="10" text-anchor="middle" fill="#54646c">Reports freshness →</text>
+          <line x1="150" y1="18" x2="150" y2="200" stroke="#e6ece9"/><line x1="36" y1="109" x2="268" y2="109" stroke="#e6ece9"/>
+          <g font-size="9.5">
+            <circle cx="86" cy="64" r="6" fill="#8a9aa0"/><text x="94" y="67" fill="#54646c">Plain MAP</text>
+            <circle cx="208" cy="160" r="6" fill="#8a9aa0"/><text x="138" y="163" fill="#54646c">Colour labels</text>
+            <circle cx="86" cy="172" r="6" fill="#8a9aa0"/><text x="94" y="175" fill="#54646c">RFID/IoT</text>
+            <circle cx="212" cy="58" r="9" fill="#0d5f66" stroke="#fff" stroke-width="2"/><text x="150" y="46" fill="#0d5f66" font-weight="800">SensoPack</text>
+          </g>
+          <defs><marker id="au" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#c3cfca"/></marker></defs>
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px;">
+          <div class="card soft" style="padding:8px 12px;"><h3 style="font-size:12px;">Protect + Sense in one film</h3></div>
+          <div class="card soft" style="padding:8px 12px;"><h3 style="font-size:12px;">Circular — chitosan from shell waste</h3></div>
+          <div class="card soft" style="padding:8px 12px;"><h3 style="font-size:12px;">Naked-eye affordable (&lt;₹5)</h3></div>
+        </div>
+      </div>
+      <div>
+        <table>
+          <tr><th>Capability</th><th>SensoPack</th><th>Colour labels<br><span style="font-weight:400">Senoptica</span></th><th>IoT tags<br><span style="font-weight:400">TrackingPacking</span></th><th>Add-on<br><span style="font-weight:400">Blakbear</span></th><th>Plain MAP</th></tr>
+          <tr><td><b>Extends shelf life</b></td><td class="tag-green">Yes</td><td>No</td><td>No</td><td>No</td><td>Partial</td></tr>
+          <tr><td><b>Reports freshness</b></td><td class="tag-green">Yes</td><td>Yes</td><td>Temp only</td><td>Yes</td><td>No</td></tr>
+          <tr><td><b>Naked-eye / no scanner</b></td><td class="tag-green">Yes</td><td class="tag-red">Needs scanner</td><td>Phone/reader</td><td>Reader</td><td>—</td></tr>
+          <tr><td><b>Packaging-integrated</b></td><td class="tag-green">Yes</td><td>Yes</td><td>No</td><td class="tag-red">Bolt-on</td><td>Yes</td></tr>
+          <tr><td><b>Cost / unit</b></td><td class="tag-green">&lt;₹5–120</td><td>High</td><td class="tag-red">&gt;$2.50</td><td>Med</td><td>Low</td></tr>
+          <tr><td><b>Biodegradable</b></td><td class="tag-green">Yes</td><td>Varies</td><td class="tag-red">No</td><td>No</td><td class="tag-red">No</td></tr>
+        </table>
+        <div class="callout teal" style="margin-top:11px;">Every incumbent solves <b>one</b> axis. SensoPack is the only entry combining active protection, honest sensing, biodegradability and affordability in one package.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 IMPACT -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">04 · Impact — Scale, Depth, Reach</span><h2>From a rural pond to a US hypermarket</h2></div><span class="num">Criterion 4</span></div>
+  <div class="body">
+    <div class="grid3">
+      <div class="card soft"><div class="eyebrow">Scale</div><div class="stat">₹62,408 cr</div><div class="slabel">India shrimp export (FY25); ~₹15,000 cr lost to spoilage/downgrades — a fraction recovered is enormous.</div></div>
+      <div class="card soft"><div class="eyebrow" style="color:var(--green)">Depth</div><div class="stat g">8 → 16 d</div><div class="slabel">doubled shelf life ends distress pricing, displaces carcinogenic formalin/ammonia-ice, preserves drip-loss weight.</div></div>
+      <div class="card soft"><div class="eyebrow" style="color:var(--amber)">Reach</div><div class="stat a">3 tiers</div><div class="slabel">one material serving wet market, organised retail and premium export.</div></div>
+    </div>
+    <svg width="100%" viewBox="0 0 640 140" style="margin-top:12px;">
+      <g font-size="12" fill="#1c2a30">
+        <path d="M20 26 H240 L210 116 H50 Z" fill="#e6f2f1" stroke="#bcdcd8"/><text x="130" y="60" text-anchor="middle" font-weight="700">Informal / rural</text><text x="130" y="78" text-anchor="middle" font-size="10.5" fill="#54646c">₹5 colour patch + liner</text>
+        <path d="M250 26 H440 L415 116 H275 Z" fill="#eaf6ec" stroke="#bfe3c8"/><text x="345" y="60" text-anchor="middle" font-weight="700">Organised retail</text><text x="345" y="78" text-anchor="middle" font-size="10.5" fill="#54646c">film + NFC tap</text>
+        <path d="M450 26 H620 L600 116 H470 Z" fill="#f7efe4" stroke="#e6cba6"/><text x="535" y="60" text-anchor="middle" font-weight="700">Export (USA/EU/JP)</text><text x="535" y="78" text-anchor="middle" font-size="10.5" fill="#54646c">plastic-free ESG premium</text>
+      </g>
+    </svg>
+    <div class="callout" style="margin-top:8px;">Not a premium gadget for the organised cold chain — <b>quality &amp; safety infrastructure for the part of the food system that has none.</b></div>
+  </div>
+</section>
+
+<!-- 10 PROTOTYPE -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">05 · Prototype Quality &amp; Stage</span><h2>A real material, an honestly-stated stage</h2></div><span class="num">Criterion 5</span></div>
+  <div class="body">
+    <div class="col-5-7">
+      <div>
+        <svg width="100%" viewBox="0 0 300 250">
+          <text x="0" y="14" font-size="11.5" font-weight="700" fill="#54646c">TECHNOLOGY READINESS LEVEL</text>
+          <g font-size="10" fill="#54646c">
+            <rect x="20" y="200" width="30" height="22" fill="#e6ece9"/><text x="35" y="215" text-anchor="middle">1</text>
+            <rect x="52" y="180" width="30" height="42" fill="#e6ece9"/><text x="67" y="215" text-anchor="middle">2</text>
+            <rect x="84" y="150" width="30" height="72" fill="#0d5f66"/><text x="99" y="215" text-anchor="middle" fill="#fff">3</text>
+            <rect x="116" y="130" width="30" height="92" fill="#2e8b52"/><text x="131" y="215" text-anchor="middle" fill="#fff">4</text>
+            <rect x="148" y="110" width="30" height="112" fill="#e6ece9"/><text x="163" y="215" text-anchor="middle">5</text>
+            <rect x="180" y="90" width="30" height="132" fill="#e6ece9"/><text x="195" y="215" text-anchor="middle">6</text>
+            <rect x="212" y="70" width="30" height="152" fill="#e6ece9"/><text x="227" y="215" text-anchor="middle">7</text>
+            <rect x="244" y="50" width="30" height="172" fill="#e6ece9"/><text x="259" y="215" text-anchor="middle">8-9</text>
+          </g>
+          <line x1="20" y1="222" x2="285" y2="222" stroke="#c3cfca"/>
+          <text x="150" y="42" font-size="11" fill="#0d5f66" font-weight="800">We are here — TRL 3–4</text>
+          <path d="M150 48 L131 128" stroke="#0d5f66" stroke-width="1.3" marker-end="url(#a5)"/>
+          <defs><marker id="a5" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#0d5f66"/></marker></defs>
+        </svg>
+      </div>
+      <div>
+        <div class="grid2" style="margin-bottom:11px;">
+          <div class="card"><h3 class="tag-green">Built</h3><p>A <b>cast bio-film prototype</b> with high optical transparency and coherent, flexible film formation — the two commercially critical properties.</p></div>
+          <div class="card"><h3 class="tag-teal">Next (8–12 wks)</h3><p>Quantitative OTR/WVTR/tensile, antimicrobial assays, anthocyanin-dye calibration to TVB-N, and shrimp shelf-life trials.</p></div>
+        </div>
+        <table>
+          <tr><th>Parameter</th><th>Prototype status</th><th>Scale-up hurdle</th></tr>
+          <tr><td>Transparency</td><td>High clarity, no phase separation</td><td>Hold on thin-gauge rolls</td></tr>
+          <tr><td>Integrity</td><td>Clean edges, uniform, no cracking</td><td>Survive heat-seal / MAP</td></tr>
+          <tr><td>Resilience</td><td>Well-formed standalone sheet</td><td>Barrier under humid cold storage</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 VIABILITY -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">06 · Viability &amp; Roadmap</span><h2>A cost tier for every buyer — from vendor to exporter</h2></div><span class="num">Criterion 6</span></div>
+  <div class="body">
+    <div class="grid3" style="margin-bottom:12px;">
+      <div class="card" style="border-top:3px solid var(--green);"><div class="eyebrow" style="color:var(--green)">Tier 1 · Basic</div><div class="stat g">&lt;₹5</div><div class="slabel">anthocyanin colour patch + film → domestic retail &amp; small exporters</div></div>
+      <div class="card" style="border-top:3px solid var(--amber);"><div class="eyebrow" style="color:var(--amber)">Tier 2 · Intermediate</div><div class="stat a">₹15–40</div><div class="slabel">film + NFC tag + freshness log → MPEDA-certified organised export</div></div>
+      <div class="card" style="border-top:3px solid var(--teal);"><div class="eyebrow">Tier 3 · Premium</div><div class="stat">₹60–120</div><div class="slabel">full smart film + digital freshness certificate → USA / EU / Japan</div></div>
+    </div>
+    <svg width="100%" viewBox="0 0 640 130">
+      <line x1="40" y1="42" x2="600" y2="42" stroke="#c3cfca" stroke-width="2"/>
+      <g font-size="11">
+        <circle cx="90" cy="42" r="8" fill="#0d5f66"/><circle cx="260" cy="42" r="8" fill="#2e8b52"/><circle cx="430" cy="42" r="8" fill="#12868a"/><circle cx="580" cy="42" r="7" fill="#c06a1c"/>
+        <g font-weight="700"><text x="90" y="26" text-anchor="middle" fill="#0d5f66">Now — TRL 3–4</text><text x="260" y="26" text-anchor="middle" fill="#2e8b52">Validate</text><text x="430" y="26" text-anchor="middle" fill="#12868a">Pilot</text><text x="580" y="26" text-anchor="middle" fill="#c06a1c">Scale</text></g>
+        <g fill="#54646c" font-size="10.5"><text x="90" y="66" text-anchor="middle">film + dye design</text><text x="260" y="66" text-anchor="middle">shelf-life + dye calibration</text><text x="430" y="66" text-anchor="middle">landing-centre trial + WTP</text><text x="580" y="66" text-anchor="middle">roll-to-roll · export tier</text></g>
+      </g>
+      <rect x="30" y="92" width="580" height="34" rx="9" fill="#f5f8f7" stroke="#d5dfdb"/>
+      <text x="46" y="113" font-size="11" fill="#1c2a30"><tspan font-weight="700" fill="#0d5f66">Who pays:</tspan> shrimp farmers, exporters/MPEDA units, processors &amp; retailers — the actors who absorb the spoilage loss today.</text>
+    </svg>
+  </div>
+</section>
+
+<!-- 12 SCORECARD + CLOSE -->
+<section class="slide">
+  <div class="shead"><div class="t"><span class="kicker">Summary</span><h2>Every judging criterion, answered</h2></div><span class="num">Scorecard</span></div>
+  <div class="body">
+    <table>
+      <tr><th style="width:22%">Criterion</th><th>SensoPack's answer</th></tr>
+      <tr><td><b>1 · Problem</b></td><td>India's ₹62,408 cr shrimp export bleeds ~₹15,000 cr to spoilage — scoped to the unrefrigerated segment others ignore.</td></tr>
+      <tr><td><b>2 · Originality</b></td><td>The only solution that <b>protects and senses</b> in one biodegradable, circular, naked-eye-affordable package.</td></tr>
+      <tr><td><b>3 · Soundness</b></td><td>Chitosan-EO shelf-life (8→16 d) + anthocyanin sensing keyed to accepted TVB-N/TMA thresholds — <b>one sensor, not five.</b></td></tr>
+      <tr><td><b>4 · Impact</b></td><td>Export earnings protected, formalin displaced, waste recovered — across three market tiers.</td></tr>
+      <tr><td><b>5 · Prototype</b></td><td>A real cast-film prototype at <b>TRL 3–4</b> with a concrete validation roadmap — stated honestly.</td></tr>
+      <tr><td><b>6 · Viability</b></td><td>&lt;₹5 to ₹120 cost tiers, capital-light, staged from wet market to premium export.</td></tr>
+    </table>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:16px;">
+      <svg width="46" height="46" viewBox="0 0 80 80" fill="none"><path d="M40 5L9 16.5V38C9 55.5 23.4 71.6 40 77C56.6 71.6 71 55.5 71 38V16.5L40 5Z" fill="url(#lg2)"/><path d="M27 40l9 9 17-19" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><defs><linearGradient id="lg2" x1="9" y1="5" x2="71" y2="77"><stop stop-color="#0d5f66"/><stop offset="1" stop-color="#c06a1c"/></linearGradient></defs></svg>
+      <div><div style="font-size:23px;font-weight:800;color:#0d5f66;letter-spacing:-.3px;">Protect. Sense. Sustain.</div><div style="font-size:12.5px;color:#54646c;">SensoPack — affordable, biodegradable smart packaging keeping India's shrimp safe, fresh and saleable. · Team Sentinel · Thank you.</div></div>
+    </div>
+  </div>
+</section>
+
+</div>
+<div class="nav"><button onclick="go(-1)">←</button><div class="counter" id="counter">1 / 12</div><button onclick="go(1)">→</button></div>
+<script>
+const slides=document.querySelectorAll('.slide');const total=slides.length;let cur=0;
+function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===cur));document.getElementById('counter').textContent=(cur+1)+' / '+total;document.getElementById('progress').style.width=(((cur+1)/total)*100)+'%';}
+function go(d){cur=Math.max(0,Math.min(total-1,cur+d));render();}
+document.addEventListener('keydown',e=>{if(['ArrowRight','ArrowDown',' '].includes(e.key))go(1);if(['ArrowLeft','ArrowUp'].includes(e.key))go(-1);});
+render();
+</script>
+</body>
+</html>

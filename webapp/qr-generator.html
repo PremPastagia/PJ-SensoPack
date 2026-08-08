@@ -56,8 +56,22 @@
       transition: all 0.2s;
     }
     input:focus, select:focus { border-color: var(--accent-indigo); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); background: white; }
+       .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
     
     .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       width: 100%; padding: 14px; border: none; border-radius: 8px; cursor: pointer;
       font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 600;
       background: var(--accent-indigo); color: white;
@@ -79,6 +93,9 @@
     
     .actions { display: flex; gap: 10px; margin-top: 1rem; flex-wrap: wrap; }
     .btn-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       padding: 8px 18px; border: 1px solid var(--border-light); border-radius: 6px;
       background: white; color: var(--text-secondary);
       font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 600;
@@ -101,19 +118,30 @@
 </head>
 <body>
   <div class="container">
-    <a href="./index.html" class="back-link">← Back to Scanner</a>
-    <h1>🦐 SensoPack QR Generator</h1>
-    <p class="subtitle">Generate QR codes for shrimp packages</p>
-
+    <a href="./index.html" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Scanner
+    </a>
+    
+    <div class="logo-container">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent-indigo)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      <span>SensoPack</span>
+    </div>
+    <h1>QR Code Generator</h1>
+    <p class="subtitle">Generate secure package configurations for shrimp freshness scans</p>
+ 
     <div class="hint">
       <strong>How it works:</strong> Each package gets a QR code with its batch info and packaging time.
       When the scanner reads this QR, it automatically calculates how long the shrimp has been stored
       and combines it with live sensor data for the freshness prediction.
     </div>
-
+ 
     <!-- Form -->
     <div class="card">
-      <div class="card-title">📝 Package Information</div>
+      <div class="card-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Package Information
+      </div>
       <div class="form-grid">
         <div class="form-group">
           <label>Batch ID</label>
@@ -123,7 +151,7 @@
           <label>Product ID</label>
           <input type="text" id="product-id" value="PKG-001" placeholder="PKG-XXX">
         </div>
-
+ 
         <div class="form-group">
           <label>Packaging Date & Time</label>
           <input type="datetime-local" id="packaging-time">
@@ -141,20 +169,35 @@
           <input type="text" id="notes" value="Whiteleg shrimp, 500g" placeholder="Product description">
         </div>
       </div>
-      <button class="btn" onclick="generateQR()">📱 Generate QR Code</button>
+      <button class="btn" onclick="generateQR()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Generate QR Code
+      </button>
     </div>
-
+ 
     <!-- Output -->
     <div class="card" id="output-card" style="display: none;">
-      <div class="card-title">📱 Generated QR Code</div>
+      <div class="card-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Generated QR Code
+      </div>
       <div class="output-area">
         <div class="qr-box" id="qr-container"></div>
         <div class="json-preview" id="json-preview"></div>
       </div>
       <div class="actions">
-        <button class="btn-sm" onclick="downloadQR()">💾 Download PNG</button>
-        <button class="btn-sm" onclick="printQR()">🖨️ Print</button>
-        <button class="btn-sm" onclick="copyJSON(this)">📋 Copy JSON</button>
+        <button class="btn-sm" onclick="downloadQR()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download PNG
+        </button>
+        <button class="btn-sm" onclick="printQR()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Print
+        </button>
+        <button class="btn-sm" id="btn-copy" onclick="copyJSON(this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span class="btn-text">Copy JSON</span>
+        </button>
       </div>
     </div>
   </div>
@@ -228,9 +271,12 @@
     }
 
     function copyJSON(btn) {
+      const textSpan = btn.querySelector('.btn-text');
       navigator.clipboard.writeText(currentJSON).then(() => {
-        btn.textContent = "✅ Copied!";
-        setTimeout(() => btn.textContent = "📋 Copy JSON", 2000);
+        if (textSpan) {
+          textSpan.textContent = "Copied!";
+          setTimeout(() => textSpan.textContent = "Copy JSON", 2000);
+        }
       });
     }
   </script>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SensoPack — Smart shrimp freshness scanner. Scan package, read sensors, predict spoilage.">
+  <title>SensoPack — Smart Freshness Scanner</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦐</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="bg-mesh"><div class="orb-3"></div></div>
+
+  <div class="app-container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header__badge"><span class="dot"></span> Smart Package Scanner</div>
+      <h1 class="header__title">SensoPack</h1>
+      <p class="header__subtitle">Scan a package to instantly assess shrimp freshness</p>
+    </header>
+
+    <!-- Step Flow -->
+    <div class="step-flow">
+      <div class="step step--active" id="step-1">
+        <span class="step__num">1</span> Connect Arduino
+      </div>
+      <span class="step-arrow">→</span>
+      <div class="step" id="step-2">
+        <span class="step__num">2</span> Scan Package
+      </div>
+      <span class="step-arrow">→</span>
+      <div class="step" id="step-3">
+        <span class="step__num">3</span> View Result
+      </div>
+    </div>
+
+    <!-- Main Grid: Camera + Sensors -->
+    <div class="main-grid" id="main-view">
+
+      <!-- Camera Panel -->
+      <div class="camera-panel glass-card" id="camera-panel">
+        <div class="camera-panel__title">📷 Camera</div>
+        <div class="camera-preview-wrapper">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <canvas id="camera-canvas"></canvas>
+          <!-- QR Alignment Guide -->
+          <div class="qr-guide" id="qr-guide">
+             <div class="qr-guide-corners"></div>
+          </div>
+          <div class="camera-overlay" id="camera-overlay">
+            <div class="camera-overlay__icon">📷</div>
+            <div>Camera will activate automatically</div>
+          </div>
+        </div>
+        <button class="scan-btn" id="scan-btn" disabled>
+          📷 Scan Package
+        </button>
+      </div>
+
+      <!-- Sensors Panel -->
+      <div class="sensors-panel glass-card">
+        <div class="sensors-panel__title">🔌 Arduino Sensors</div>
+
+        <button class="connect-btn" id="connect-btn">
+          🔌 Connect Arduino
+        </button>
+
+        <div class="connection-status">
+          <span class="status-dot" id="arduino-dot"></span>
+          <span id="arduino-status-text">Disconnected</span>
+        </div>
+
+        <div class="sensor-readouts">
+          <div class="sensor-readout" id="readout-ammonia">
+            <span class="sensor-readout__label">💨 Ammonia</span>
+            <span class="sensor-readout__value sensor-readout__value--waiting" id="val-ammonia">
+              waiting...
+            </span>
+          </div>
+          <div class="sensor-readout" id="readout-temp">
+            <span class="sensor-readout__label">🌡️ Temperature</span>
+            <span class="sensor-readout__value sensor-readout__value--waiting" id="val-temp">
+              waiting...
+            </span>
+          </div>
+          <div class="sensor-readout" id="readout-humidity">
+            <span class="sensor-readout__label">💧 Humidity</span>
+            <span class="sensor-readout__value sensor-readout__value--waiting" id="val-humidity">
+              waiting...
+            </span>
+          </div>
+        </div>
+
+        <!-- Demo mode toggle for presentations without hardware -->
+        <div style="margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(99,102,241,0.08);">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" id="demo-mode-toggle" style="accent-color: var(--accent-indigo);">
+            Demo Mode (simulate sensors &amp; QR)
+          </label>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Scan Summary (hidden until scan) -->
+    <div class="scan-summary glass-card hidden" id="scan-summary">
+      <div class="scan-summary__title">📋 Scan Summary</div>
+
+      <!-- Package Info from QR -->
+      <div style="font-size:0.72rem; font-weight:700; color:var(--accent-indigo); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">📱 Package Info (from QR)</div>
+      <div class="summary-grid" style="margin-bottom:1.25rem;">
+        <div class="summary-item">
+          <div class="summary-item__label">🏷️ Batch ID</div>
+          <div class="summary-item__value" id="sum-batch">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">📦 Product ID</div>
+          <div class="summary-item__value" id="sum-product">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">📅 Packaging Time</div>
+          <div class="summary-item__value" id="sum-packtime">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">🌡️ Initial Temp</div>
+          <div class="summary-item__value" id="sum-inittemp">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">📍 Location</div>
+          <div class="summary-item__value" id="sum-location">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">📝 Notes</div>
+          <div class="summary-item__value" id="sum-notes">—</div>
+        </div>
+      </div>
+
+      <!-- Computed & Sensor Data -->
+      <div style="font-size:0.72rem; font-weight:700; color:var(--accent-cyan); text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">🔬 Sensor & Analysis Data</div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-item__label">⏱️ Storage Time</div>
+          <div class="summary-item__value" id="sum-storage">—</div>
+          <div class="summary-item__detail" id="sum-storage-detail"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">🎨 Biofilm Color</div>
+          <div class="summary-item__value" id="sum-biofilm">—</div>
+          <div class="summary-item__detail" id="sum-biofilm-detail"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">🧪 Estimated pH</div>
+          <div class="summary-item__value" id="sum-ph">—</div>
+          <div class="summary-item__detail" id="sum-ph-detail"></div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">💨 Ammonia</div>
+          <div class="summary-item__value" id="sum-ammonia">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">🌡️ Temperature</div>
+          <div class="summary-item__value" id="sum-temp">—</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-item__label">💧 Humidity</div>
+          <div class="summary-item__value" id="sum-humidity">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Panel (hidden until prediction) -->
+    <div class="result-panel glass-card hidden" id="result-panel">
+      <div class="result-panel__title">🦐 Freshness Prediction</div>
+
+      <div class="status-badge" id="status-badge">
+        <span class="status-badge__icon" id="status-icon"></span>
+        <span id="status-label"></span>
+      </div>
+
+      <div class="confidence-section">
+        <div class="confidence-section__title">Confidence Scores</div>
+        <div class="confidence-bar confidence-bar--safe">
+          <div class="confidence-bar__header">
+            <span class="confidence-bar__label">✅ Safe</span>
+            <span class="confidence-bar__value" id="conf-safe">—</span>
+          </div>
+          <div class="confidence-bar__track"><div class="confidence-bar__fill" id="bar-safe"></div></div>
+        </div>
+        <div class="confidence-bar confidence-bar--caution">
+          <div class="confidence-bar__header">
+            <span class="confidence-bar__label">⚠️ Caution</span>
+            <span class="confidence-bar__value" id="conf-caution">—</span>
+          </div>
+          <div class="confidence-bar__track"><div class="confidence-bar__fill" id="bar-caution"></div></div>
+        </div>
+        <div class="confidence-bar confidence-bar--unsafe">
+          <div class="confidence-bar__header">
+            <span class="confidence-bar__label">🚫 Unsafe</span>
+            <span class="confidence-bar__value" id="conf-unsafe">—</span>
+          </div>
+          <div class="confidence-bar__track"><div class="confidence-bar__fill" id="bar-unsafe"></div></div>
+        </div>
+      </div>
+      <button class="btn" style="margin-top: 1.5rem; width: 100%;" onclick="resetScanner()">🔄 Scan Another Package</button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="qr-generator.html" style="color: #818cf8; text-decoration: none;">📱 Generate Package QR Codes</a>
+    </footer>
+
+  </div>
+
+  <!-- Toasts -->
+  <div class="error-toast" id="error-toast"></div>
+  <div class="info-toast" id="info-toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

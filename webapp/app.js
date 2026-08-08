@@ -29,7 +29,7 @@ const dom = {
   sandboxCard:    document.getElementById("sandbox-card"),
   sandboxToggle:  document.getElementById("sandbox-toggle"),
   btnSimulate:    document.getElementById("btn-simulate"),
-  slAmmonia:      document.getElementById("slider-ammonia"),
+  slAmmonia:      document.getElementById("ammonia-slider"),
   slPh:           document.getElementById("slider-ph"),
   slTemp:         document.getElementById("slider-temp"),
   slHumidity:     document.getElementById("slider-humidity"),
@@ -618,7 +618,9 @@ window.addEventListener("DOMContentLoaded", () => {
   Camera.init();
   UIManager.init();
 
-  dom.scanBtn.addEventListener("click", () => {
-    if (!dom.scanBtn.disabled) runScan();
-  });
+  if (dom.scanBtn) {
+    dom.scanBtn.addEventListener("click", () => {
+      if (!dom.scanBtn.disabled) runScan();
+    });
+  }
 });

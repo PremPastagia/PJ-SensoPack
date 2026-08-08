@@ -8,7 +8,7 @@ from firebase_admin import credentials, db
 
 app = FastAPI()
 
-# Allow CORS for mobile app access
+# Allow CORS for all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,18 +17,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Pure Python Random Forest Model
-import sys
-sys.path.append(os.path.dirname(__file__))
+# ═══════════════════════════════════════════════════════════════════════════
+# Dynamic Model Loader & Intelligence Pipeline
+# ═══════════════════════════════════════════════════════════════════════════
+import joblib
+import pandas as pd
 
-try:
-    from rf_model import score as predict_proba
-except ImportError:
+model = None
+model_type = None
+
+# Search candidate paths for Joblib models dynamically
+base_dir = os.path.dirname(__file__)
+project_root = os.path.dirname(base_dir)
+
+candidate_paths = [
+    os.path.join(base_dir, "shrimp_spoilage_model.joblib"),
+    os.path.join(project_root, "shrimp_spoilage_model.joblib"),
+    os.path.join(project_root, "shrimp_spoilage_model_rf.joblib"),
+    os.path.join(project_root, "shrimp_spoilage_model_xgb.joblib"),
+    os.path.join(project_root, "V1", "shrimp_spoilage_model.joblib")
+]
+
+for path in candidate_paths:
+    if os.path.exists(path):
+        try:
+            model = joblib.load(path)
+            model_type = "joblib"
+            print(f"[SUCCESS] Dynamically loaded ML Model from: {path}")
+            break
+        except Exception as e:
+            print(f"[WARN] Failed to load joblib model at {path}: {e}")
+
+# Fallback to pure Python transpiled models if joblib is unavailable
+if model is None:
+    import sys
+    sys.path.append(base_dir)
     try:
-        from api.rf_model import score as predict_proba
-    except ImportError as e:
-        print(f"Model Import Error: {e}")
-        predict_proba = None
+        from xgb_model import predict_proba as xgb_predict
+        model = xgb_predict
+        model_type = "pure_python_xgb"
+        print("[SUCCESS] Loaded pure-Python XGBoost model.")
+    except ImportError:
+        try:
+            from rf_model import score as rf_predict
+            model = rf_predict
+            model_type = "pure_python_rf"
+            print("[SUCCESS] Loaded pure-Python Random Forest model.")
+        except ImportError:
+            print("[ERROR] No ML Model could be loaded.")
+
+# Configurable Failsafe Biological Overrides
+FAILSAFE_AMMONIA_PPM = float(os.environ.get("FAILSAFE_AMMONIA_PPM", 15.0))
+FAILSAFE_TEMP_C = float(os.environ.get("FAILSAFE_TEMP_C", 32.0))
+FAILSAFE_PH_LEVEL = float(os.environ.get("FAILSAFE_PH_LEVEL", 7.5))
 
 # Initialize Firebase
 try:
@@ -37,11 +78,14 @@ try:
     
     if not firebase_admin._apps:
         if cred_json:
-            cred_dict = json.loads(cred_json)
+            cred_json_clean = cred_json.replace('\\n', '\n')
+            cred_dict = json.loads(cred_json_clean)
+            if "private_key" in cred_dict:
+                cred_dict["private_key"] = cred_dict["private_key"].replace('\\n', '\n')
             cred = credentials.Certificate(cred_dict)
         else:
             # Local fallback
-            cred_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "serviceAccountKey.json")
+            cred_path = os.path.join(project_root, "serviceAccountKey.json")
             if os.path.exists(cred_path):
                 cred = credentials.Certificate(cred_path)
             else:
@@ -64,11 +108,16 @@ class PredictRequest(BaseModel):
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "firebase": firebase_initialized, "model_loaded": predict_proba is not None}
+    return {
+        "status": "ok", 
+        "firebase": firebase_initialized, 
+        "model_loaded": model is not None,
+        "model_type": model_type
+    }
 
 @app.post("/api/predict")
 def predict(req: PredictRequest):
-    if not predict_proba:
+    if not model:
         raise HTTPException(status_code=500, detail="ML Model not loaded")
         
     try:
@@ -97,7 +146,6 @@ def predict(req: PredictRequest):
             temp = float(sensor_data['temp_c'])
             humidity = float(sensor_data['humidity'])
             
-            # Ammonia is always sourced from the manual slider for upload/scan mode
             ammonia_ppm = req.ammonia_ppm
             ammonia_source = "manual"
                 
@@ -113,12 +161,8 @@ def predict(req: PredictRequest):
         time_exposed = req.time_exposed_hours
         ph_level = req.ph_level
 
-        # 2. BIOLOGICAL OVERRIDE (Failsafe)
-        # Thresholds match the literature-grounded "Spoiled" bounds (see
-        # PHASE1_LITERATURE.md): ammonia headspace >15ppm, pH >7.5. Storage
-        # temp >32C is just above the training data's abuse-band ceiling
-        # (-2 to 30C), i.e. clearly outside the model's trained domain.
-        if ammonia_ppm >= 15.0 or temp >= 32.0 or ph_level >= 7.5:
+        # 2. DYNAMIC BIOLOGICAL OVERRIDE (Failsafe)
+        if ammonia_ppm >= FAILSAFE_AMMONIA_PPM or temp >= FAILSAFE_TEMP_C or ph_level >= FAILSAFE_PH_LEVEL:
             return {
                 "prediction": "UNSAFE",
                 "status": "Spoiled",
@@ -132,16 +176,76 @@ def predict(req: PredictRequest):
                 }
             }
 
-        # Features matching V1 model: ["ammonia_ppm", "ph_level", "temperature_c", "storage_time_hrs", "humidity_pct"]
-        features = [ammonia_ppm, ph_level, temp, time_exposed, humidity]
-        
+        # 3. DYNAMIC FEATURE ALIGNMENT
+        # Map all available input datapoints into an alias dictionary
+        datapoint_map = {
+            'ammonia_ppm': ammonia_ppm,
+            'mq_raw': ammonia_ppm,
+            'ph_level': ph_level,
+            'temp': temp,
+            'temp_c': temp,
+            'temperature_c': temp,
+            'time_exposed_hours': time_exposed,
+            'storage_time_hrs': time_exposed,
+            'humidity': humidity,
+            'humidity_pct': humidity,
+            'degree_hours': temp * time_exposed
+        }
+
         # 4. ML INFERENCE
-        probs = predict_proba(features)
-        safe_score = float(probs[0])
-        caution_score = float(probs[1])
-        unsafe_score = float(probs[2])
-        
-        # Determine main prediction based on highest probability
+        if model_type == "joblib":
+            # Dynamically extract feature names expected by the trained model
+            if hasattr(model, "feature_names_in_"):
+                expected_cols = list(model.feature_names_in_)
+                row = [datapoint_map.get(col, 0.0) for col in expected_cols]
+                df_features = pd.DataFrame([row], columns=expected_cols)
+            else:
+                # Default feature list fallback
+                expected_cols = ['ammonia_ppm', 'ph_level', 'temperature_c', 'storage_time_hrs', 'humidity_pct']
+                row = [datapoint_map.get(col, 0.0) for col in expected_cols]
+                df_features = pd.DataFrame([row], columns=expected_cols)
+            
+            raw_probs = model.predict_proba(df_features)[0]
+            
+            # Map probabilities dynamically based on model classes
+            classes = getattr(model, "classes_", [0, 1, 2])
+            if len(raw_probs) == 3:
+                safe_score = float(raw_probs[0])
+                caution_score = float(raw_probs[1])
+                unsafe_score = float(raw_probs[2])
+            elif len(raw_probs) == 2:
+                spoilage_prob = float(raw_probs[1])
+                safe_score = max(0.0, 1.0 - spoilage_prob)
+                unsafe_score = spoilage_prob
+                caution_score = 0.4 - abs(spoilage_prob - 0.4) if 0.2 < spoilage_prob < 0.6 else 0.0
+                tot = safe_score + caution_score + unsafe_score
+                safe_score /= tot
+                caution_score /= tot
+                unsafe_score /= tot
+            else:
+                safe_score, caution_score, unsafe_score = 0.33, 0.33, 0.34
+                
+        else:
+            # Pure Python model invocation
+            # Features order: [temp, humidity, ammonia_ppm, time_exposed, ph_level, degree_hours] or [ammonia_ppm, ph_level, temp, time_exposed, humidity]
+            try:
+                features = [ammonia_ppm, ph_level, temp, time_exposed, humidity]
+                raw_probs = model(features)
+            except Exception:
+                features = [temp, humidity, ammonia_ppm, time_exposed, ph_level, temp * time_exposed]
+                raw_probs = model(features)
+                
+            if len(raw_probs) == 3:
+                safe_score = float(raw_probs[0])
+                caution_score = float(raw_probs[1])
+                unsafe_score = float(raw_probs[2])
+            else:
+                spoilage_prob = float(raw_probs[1]) if len(raw_probs) > 1 else float(raw_probs[0])
+                safe_score = 1.0 - spoilage_prob
+                unsafe_score = spoilage_prob
+                caution_score = 0.0
+
+        # Determine main prediction dynamically based on highest confidence
         max_prob = max(safe_score, caution_score, unsafe_score)
         if max_prob == unsafe_score:
             status = "UNSAFE"

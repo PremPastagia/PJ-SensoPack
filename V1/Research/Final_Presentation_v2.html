@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SensoPack — Final Presentation (12 slides)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+ --bg:#f4f1ea; --panel:#ffffff; --panel2:#faf7f0; --tintt:#eaf1f0; --tintb:#f6ecdf; --tintg:#ecf3ee; --tintp:#efe9f6;
+ --ink:#21303a; --ink2:#5f6d75; --ink3:#9aa4aa;
+ --teal:#0e5b62; --teal2:#12868a; --bronze:#a2622b; --gold:#bf8b30; --green:#2f7d52; --red:#b23b3b; --line:#e4ded1;
+}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,sans-serif;overflow:hidden;}
+.deck{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;padding:32px 52px 46px;opacity:0;transform:translateY(16px);
+ transition:opacity .38s ease,transform .38s ease;pointer-events:none;display:flex;flex-direction:column;overflow:hidden;}
+.slide.active{opacity:1;transform:translateY(0);pointer-events:all;}
+.slide::before{content:'';position:absolute;top:0;left:0;height:6px;width:100%;
+ background:linear-gradient(90deg,var(--teal),var(--gold) 55%,var(--bronze));}
+.shead{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:16px;flex-shrink:0;}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--teal);}
+.shead h2{font-size:24px;font-weight:800;letter-spacing:-.3px;margin-top:3px;line-height:1.08;color:var(--ink);}
+.shead .num{font-size:11.5px;color:var(--ink3);font-weight:600;white-space:nowrap;padding-left:14px;}
+.body{flex:1;min-height:0;display:flex;flex-direction:column;}
+.grow{flex:1;min-height:0;}
+.lead{font-size:14.5px;color:var(--ink2);line-height:1.5;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.grid2.grow,.grid3.grow{grid-auto-rows:1fr;}
+.vstack{display:flex;flex-direction:column;gap:16px;}
+.vstack.grow{height:100%;}
+.vstack.grow>*{flex:1;min-height:0;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:20px 22px;
+ display:flex;flex-direction:column;justify-content:center;}
+.card.top{justify-content:flex-start;}
+.card.soft{background:var(--panel2);}
+.card.tint{background:var(--tintt);border-color:#cfe0dd;}
+.card h3{font-size:16px;font-weight:700;margin-bottom:8px;color:var(--teal);}
+.card h3.ink{color:var(--ink);}
+.card p{font-size:13.5px;color:var(--ink2);line-height:1.55;margin-bottom:7px;}
+.card p:last-child{margin-bottom:0;}
+.card p b,.card li b{color:var(--ink);}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:9px;}
+.pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal);border-radius:99px;padding:4px 13px;}
+.stat{font-size:32px;font-weight:800;color:var(--teal);line-height:1;letter-spacing:-.5px;}
+.stat.g{color:var(--green);}.stat.b{color:var(--bronze);}
+.slabel{font-size:12.5px;color:var(--ink2);line-height:1.4;}
+.tag-g{color:var(--green);font-weight:700;}.tag-r{color:var(--red);font-weight:700;}
+ul.clean{list-style:none;}
+ul.clean li{position:relative;padding-left:20px;margin:9px 0;font-size:13.5px;line-height:1.5;color:var(--ink);}
+ul.clean li::before{content:'';position:absolute;left:0;top:5px;width:9px;height:9px;border-radius:3px;background:linear-gradient(135deg,var(--teal),var(--gold));}
+ul.tight li{margin:7px 0;font-size:13px;}
+table{border-collapse:collapse;width:100%;font-size:12.5px;}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:middle;}
+th{background:var(--teal);color:#fff;font-weight:600;font-size:11.5px;}
+tr:nth-child(even) td{background:var(--panel2);}
+.callout{background:var(--tintb);border-left:4px solid var(--bronze);border-radius:0 10px 10px 0;padding:13px 17px;font-size:13px;color:#6a4a24;line-height:1.5;}
+.callout.teal{background:var(--tintt);border-color:var(--teal);color:#144a4d;}
+svg{display:block;} svg text{font-family:inherit;}
+.photo{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fff;}
+.photo.grow{height:100%;}
+.photo.grow img{width:100%;height:100%;object-fit:cover;display:block;}
+.photo img{width:100%;display:block;}
+.figcap{font-size:11.5px;color:var(--ink3);margin-top:8px;text-align:center;flex-shrink:0;}
+.slide.imgfull{padding:28px 44px 30px;align-items:center;justify-content:center;}
+.imgfull img{max-width:100%;max-height:calc(100% - 4px);object-fit:contain;border-radius:12px;background:#fff;border:1px solid var(--line);}
+.fkick{position:absolute;top:14px;left:44px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);z-index:2;}
+.fnum{position:absolute;top:14px;right:44px;font-size:11px;color:var(--ink3);font-weight:600;z-index:2;}
+.nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:99px;padding:6px 15px;z-index:60;}
+.nav button{background:none;border:none;font-size:15px;color:var(--teal);cursor:pointer;padding:2px 8px;border-radius:6px;}
+.nav button:hover{background:var(--panel2);}
+.counter{font-size:11.5px;color:var(--ink2);min-width:52px;text-align:center;}
+.progress{position:fixed;top:0;left:0;height:6px;background:linear-gradient(90deg,var(--teal),var(--bronze));z-index:70;transition:width .35s ease;}
+.brand{position:fixed;bottom:18px;right:24px;font-size:10px;color:var(--ink3);z-index:50;}
+.title{align-items:center;justify-content:center;text-align:center;}
+.title h1{font-size:56px;font-weight:800;letter-spacing:-1.2px;line-height:1;color:var(--ink);}
+.title .sub{font-size:18px;color:var(--teal);font-weight:600;margin-top:11px;}
+.title .team{font-size:13px;color:var(--ink2);margin-top:20px;line-height:1.7;}
+.title .tagline{font-size:12.5px;color:var(--ink3);font-style:italic;margin-top:22px;}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="brand">Team Sentinel · IIT Kharagpur Platinum Jubilee Innovation Challenge · Round 2</div>
+<div class="deck">
+
+<!-- 1 TITLE -->
+<section class="slide title active">
+ <img src="file:///Users/virajvekariya/Desktop/deck_imgs/p01_x23_1256x1256.png" style="width:150px;height:150px;object-fit:contain;margin-bottom:6px;"/>
+ <div class="pill">Team Sentinel</div>
+ <h1 style="margin-top:16px;">SensoPack</h1>
+ <div class="sub">Smart, Sustainable &amp; Intelligent Freshness Packaging</div>
+ <div class="team"><b style="color:var(--ink);">Presenters</b><br>Naveen Kumar Chandrakar&nbsp;·&nbsp;Aishik Das&nbsp;·&nbsp;Jaspreet Kaur<br>Prem Pastagia&nbsp;·&nbsp;Vekariya Viraj Parbatbhai&nbsp;·&nbsp;Zalavadiya Dishil</div>
+ <div class="tagline">TEVIX — Technology guided by ecology, driven by intelligence, creating value with exponential impact.</div>
+</section>
+
+<!-- 2 PROBLEM & SIGNIFICANCE -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Problem Significance</span><h2>India exports the world's shrimp — and loses a fortune to spoilage</h2></div></div>
+ <div class="body">
+  <div class="grid2 grow" style="margin-bottom:16px;">
+   <div class="vstack grow">
+    <div class="card"><h3 class="ink">Biological Spoilage</h3><p>Protein-rich foods (shrimp, fish, meat) hold high moisture &amp; nutrients — a high susceptibility for rapid microbial growth and quality decay.</p></div>
+    <div class="card"><h3 class="ink">Unpredictable Cold Chains</h3><p>Refrigeration slows decay, but unmonitored temperature breaches still cause loss. Conventional packaging protects — it cannot <b>report</b> freshness.</p></div>
+   </div>
+   <div class="card">
+    <div class="eyebrow">India's Seafood Export Dominance · FY 2025–26 high</div>
+    <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);margin-bottom:5px;"><b style="color:var(--ink);">Total seafood exports</b><span>US$ 8.46 B</span></div>
+     <div style="height:28px;border-radius:7px;background:linear-gradient(90deg,#0e5b62,#12868a);display:flex;align-items:center;padding-left:12px;color:#fff;font-weight:700;font-size:13px;">US$ 8.46 Billion</div></div>
+    <div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);margin-bottom:5px;"><b style="color:var(--green);">Frozen shrimp</b><span>66.52% of value</span></div>
+     <div style="height:28px;border-radius:7px;background:var(--line);"><div style="width:66.5%;height:100%;border-radius:7px;background:linear-gradient(90deg,#2f7d52,#4fae76);display:flex;align-items:center;padding-left:12px;color:#fff;font-weight:700;font-size:13px;">US$ 5.62 Billion</div></div></div>
+    <div class="callout"><b>₹62,408 cr</b> shrimp exported (FY24-25) · <b>~₹15,000 cr</b> lost to spoilage before it reaches a plate.</div>
+   </div>
+  </div>
+  <div class="grid3" style="flex:0 0 auto;height:1.55in;">
+   <div class="card soft" style="flex-direction:row;align-items:center;gap:16px;"><div class="stat">69%</div><div class="slabel">of India's seafood dollar earnings come from shrimp</div></div>
+   <div class="card soft" style="flex-direction:row;align-items:center;gap:16px;"><div class="stat g">$2.71B</div><div class="slabel">India → USA shrimp alone (FY25) — the premium market</div></div>
+   <div class="card soft" style="flex-direction:row;align-items:center;gap:16px;"><div class="stat b">~35%</div><div class="slabel">of harvested fish/seafood lost globally before a plate</div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 3 GAP -> SOLUTION -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Originality &amp; Creativity</span><h2>Why current solutions fail — and our answer</h2></div></div>
+ <div class="body">
+  <div class="callout" style="flex:0 0 auto;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+   <div><b>The active-tag cost barrier:</b> electronic tracking tags cost &gt;$2.50/unit — unviable when the sensor must fit within 5–8% of package value.</div>
+   <div><b>Domestic reality:</b> ~90% of the Indian food sector runs with no continuous refrigeration — visual point-of-sale checks are unreliable.</div>
+  </div>
+  <div class="grid3 grow">
+   <div class="card tint"><h3 class="ink">Dual-Function Smart Bioactive Film</h3><p>Active <b>antimicrobial protection</b> and <b>real-time freshness sensing</b> in one biodegradable film — preserves food and reports its quality simultaneously.</p></div>
+   <div class="card tint"><h3 class="ink">Circular Bioeconomy Design</h3><p>Turns <b>shrimp-shell waste</b> into a chitosan biofilm with natural essential oils, plus a <b>reusable NFC tag</b> — cutting plastic and e-waste.</p></div>
+   <div class="card tint"><h3 class="ink">Multi-Tier Democratic Platform</h3><p>Scales from <b>battery-free colour indicators</b> for micro-vendors to <b>AI-enabled NFC sensing</b> for international exporters.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 4 ORIGINALITY & COMPETITIVE EDGE -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Originality &amp; Creativity</span><h2>The only solution that both protects and reports — affordably</h2></div></div>
+ <div class="body"><div class="grow" style="display:grid;grid-template-columns:1.15fr 1fr;gap:22px;">
+  <div style="display:flex;flex-direction:column;">
+   <table style="font-size:12px;">
+    <tr><th>Capability</th><th>SensoPack</th><th>Colour labels</th><th>IoT tags</th><th>Plain MAP</th></tr>
+    <tr><td><b>Extends shelf life</b></td><td class="tag-g">Yes</td><td>No</td><td>No</td><td>Partial</td></tr>
+    <tr><td><b>Reports freshness</b></td><td class="tag-g">Yes</td><td>Yes</td><td>Temp only</td><td>No</td></tr>
+    <tr><td><b>Naked-eye / no scanner</b></td><td class="tag-g">Yes</td><td class="tag-r">Scanner</td><td>Phone</td><td>—</td></tr>
+    <tr><td><b>Packaging-integrated</b></td><td class="tag-g">Yes</td><td>Yes</td><td class="tag-r">No</td><td>Yes</td></tr>
+    <tr><td><b>Cost / unit</b></td><td class="tag-g">&lt;₹5–120</td><td>High</td><td class="tag-r">&gt;$2.50</td><td>Low</td></tr>
+    <tr><td><b>Biodegradable</b></td><td class="tag-g">Yes</td><td>Varies</td><td class="tag-r">No</td><td class="tag-r">No</td></tr>
+   </table>
+   <div class="callout teal" style="margin-top:auto;">Every incumbent solves one axis. SensoPack is the only entry combining active protection, honest sensing, biodegradability and affordability in one package.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:14px;">
+   <div class="photo grow"><img src="file:///Users/virajvekariya/Desktop/deck_imgs/p15_x481_1429x657.png" style="object-fit:contain;"/></div>
+   <div class="photo grow"><img src="file:///Users/virajvekariya/Desktop/deck_imgs/p15_x480_910x440.png" style="object-fit:contain;"/></div>
+  </div>
+ </div></div>
+</section>
+
+<!-- 5 CASCADE -->
+<section class="slide imgfull">
+ <div class="fkick">Technical Feasibility · Four-Stage Spoilage Cascade</div><div class="fnum">Ref: Das &amp; Mishra (2023)</div>
+ <img src="file:///Users/virajvekariya/Desktop/deck_imgs/p07_x200_1376x768.png"/>
+</section>
+
+<!-- 6 TECHNICAL FEASIBILITY (no factory image) -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Technical Feasibility &amp; Soundness</span><h2>Detect · Sense · Manufacture at scale</h2></div></div>
+ <div class="body"><div class="grid3 grow">
+  <div class="card"><div class="eyebrow">Multi-Biomarker Detection</div>
+   <ul class="clean"><li><b>TMA</b> — volatile amines of protein decay</li><li><b>TVB-N</b> — broad freshness / shelf-life index</li><li><b>pH shift</b> — real-time electrochemical tracking</li></ul>
+   <p style="font-size:12.5px;color:var(--ink2);margin-top:14px;line-height:1.5;">Scientifically validated parameters track degradation across the full spoilage process.</p></div>
+  <div class="card"><div class="eyebrow">Advanced Sensing Platform</div>
+   <ul class="clean"><li><b>MIP sensors</b> — synthetic-antibody selectivity</li><li><b>130 nm CMOS ASIC</b> — clean digital signal, ultra-low power</li><li><b>NFC</b> — passive, battery-free wireless reads</li></ul>
+   <p style="font-size:12.5px;color:var(--ink2);margin-top:14px;line-height:1.5;">Molecular selectivity converted to stable freshness data, read with no battery.</p></div>
+  <div class="card"><div class="eyebrow">Manufacturing Scale</div>
+   <ul class="clean"><li><b>Roll-to-roll</b> / slot-die, high-volume</li><li><b>Ultra-thin film</b> &lt;20 µm</li><li>Fits existing <b>heat-sealers</b> — zero overhaul</li></ul>
+   <p style="font-size:12.5px;color:var(--ink2);margin-top:14px;line-height:1.5;">Manufacturable on standard packaging lines with no factory overhaul.</p></div>
+ </div></div>
+</section>
+
+<!-- 7 ARCHITECTURE -->
+<section class="slide imgfull">
+ <div class="fkick">System Architecture · Protect · Sense · Communicate · Predict</div><div class="fnum">Four-Layer Modular Design</div>
+ <img src="file:///Users/virajvekariya/Desktop/deck_imgs/p11_x349_1536x1024.png"/>
+</section>
+
+<!-- 8 IMPACT -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Impact — Scale, Depth, Reach</span><h2>Safer food, protected margins, universal reach</h2></div></div>
+ <div class="body"><div class="grow" style="display:grid;grid-template-columns:0.8fr 1.2fr;gap:22px;">
+  <div style="display:flex;flex-direction:column;">
+   <div class="photo grow"><img src="file:///Users/virajvekariya/Desktop/deck_imgs/p12_x373_477x381.png"/></div>
+   <div class="figcap">Fresh shrimp on ice — the high-value product SensoPack protects.</div>
+  </div>
+  <div class="vstack grow">
+   <div class="card soft"><h3 style="color:var(--green);">Food Safety &amp; Health</h3><p>Real-time TMA / TVB-N tracking prevents toxic seafood consumption and deters unsafe preservatives like <b>formalin</b>.</p></div>
+   <div class="card soft"><h3 style="color:var(--bronze);">Reducing Supply-Chain Loss</h3><p>Validated freshness eliminates <b>20–25% distress markdowns</b> and protects margins for fishermen, exporters &amp; retailers.</p></div>
+   <div class="card soft"><h3 class="ink">Affordable, Universal Reach</h3><p>A three-tier model works from rural fish-landing harbours to global container chains — lifting India's multi-billion-dollar export industry.</p></div>
+  </div>
+ </div></div>
+</section>
+
+<!-- 9 PROTOTYPE & ROADMAP -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Prototype Quality &amp; Stage</span><h2>Working lab-scale prototype — and a clear path forward</h2></div><span class="num">TRL 3–4</span></div>
+ <div class="body"><div class="grow" style="display:grid;grid-template-columns:0.62fr 1.38fr;gap:22px;">
+  <div style="display:flex;flex-direction:column;">
+   <div style="flex:1;background:#20262b;border-radius:12px;display:flex;align-items:center;justify-content:center;"><img src="file:///Users/virajvekariya/Desktop/fig_film.png" style="max-width:70%;max-height:80%;border-radius:5px;"/></div>
+   <div class="figcap">Cast chitosan bio-film — actual specimen. Transparent, biodegradable, tailored to seafood.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;">
+   <table style="font-size:12.5px;margin-bottom:14px;">
+    <tr><th style="width:20%;">Parameter</th><th>Current status</th><th>Scale-up hurdle</th></tr>
+    <tr><td><b>Transparency</b></td><td>High optical clarity; no phase separation</td><td>Hold clarity on thin-gauge industrial rolls</td></tr>
+    <tr><td><b>Integrity</b></td><td>Clean edges, uniform, no drying cracks</td><td>Survive heat-sealing &amp; MAP constraints</td></tr>
+    <tr><td><b>Resilience</b></td><td>Durable standalone protective sheet</td><td>Maintain moisture barrier in cold storage</td></tr>
+   </table>
+   <div class="eyebrow" style="margin-bottom:12px;">Next development milestones</div>
+   <div class="grid3 grow" style="gap:14px;">
+    <div class="card soft" style="padding:16px;"><b style="font-size:14px;color:var(--ink);">Smart Hardware</b><p style="margin:6px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.5;">Embed NFC sensing nodes inside the barrier film.</p></div>
+    <div class="card soft" style="padding:16px;"><b style="font-size:14px;color:var(--ink);">AI Shelf-Life</b><p style="margin:6px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.5;">Predictive modelling from sensor telemetry.</p></div>
+    <div class="card soft" style="padding:16px;"><b style="font-size:14px;color:var(--ink);">Pilot Validation</b><p style="margin:6px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.5;">Refrigerated-shrimp trials in real conditions.</p></div>
+   </div>
+  </div>
+ </div></div>
+</section>
+
+<!-- 10 VIABILITY & REVENUE -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Viability of the Business</span><h2>Scalable, low-cost, and multiple revenue streams</h2></div></div>
+ <div class="body"><div class="grow" style="display:grid;grid-template-columns:0.72fr 1.28fr;gap:22px;">
+  <div style="display:flex;flex-direction:column;">
+   <div class="photo grow"><img src="file:///Users/virajvekariya/Desktop/deck_imgs/p19_x621_477x381.png"/></div>
+   <div class="figcap">One phone tap → a per-tray freshness verdict at the retail shelf.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px;">
+   <div class="grid3 grow" style="gap:16px;">
+    <div class="card"><h3 class="ink" style="color:var(--green);">Packaging Films</h3><p>B2B sales of eco-friendly, sensor-embedded smart films to processors &amp; exporters.</p></div>
+    <div class="card"><h3 class="ink" style="color:var(--green);">Premium NFC Tags</h3><p>Reusable NFC tags tracking telemetry for cold-chain operators &amp; high-value logistics.</p></div>
+    <div class="card"><h3 class="ink" style="color:var(--green);">SaaS AI Platform</h3><p>Recurring subscription to the predictive Freshness-Intelligence AI portal.</p></div>
+   </div>
+   <div class="card tint" style="flex:0 0 auto;"><div class="eyebrow">Core Value Proposition</div><p style="font-size:13.5px;color:var(--ink);line-height:1.55;margin:0;">Affordable smart packaging + reusable electronics + cloud AI in <b>one scalable ecosystem</b> — cutting food waste while boosting logistics margins. Low-cost, modular, and compatible with existing MAP lines.</p></div>
+  </div>
+ </div></div>
+</section>
+
+<!-- 11 IMPLEMENTATION — VALUE PROPOSITION -->
+<section class="slide">
+ <div class="shead"><div><span class="kicker">Implementation Model</span><h2>Built around one value proposition</h2></div></div>
+ <div class="body">
+  <div class="grow" style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;margin-bottom:16px;">
+   <div class="card tint top">
+    <div class="eyebrow">Core Value Proposition</div>
+    <p style="font-size:14.5px;color:var(--ink);line-height:1.5;margin-bottom:16px;flex-shrink:0;"><b>SensoPack keeps perishable protein fresh longer — and proves it in real time —</b> in one affordable, biodegradable package.</p>
+    <div class="grid2" style="gap:14px;flex:1;min-height:0;grid-auto-rows:1fr;align-items:center;">
+     <div style="display:flex;gap:11px;align-items:center;"><div style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:var(--tintg);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f7d52" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></svg></div><div><b style="font-size:13.5px;color:var(--ink);">Protect</b><div style="font-size:12px;color:var(--ink2);line-height:1.35;">Extends shelf life &amp; cuts spoilage</div></div></div>
+     <div style="display:flex;gap:11px;align-items:center;"><div style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:var(--tintt);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0e5b62" stroke-width="2"><path d="M5 12a10 10 0 0 1 14 0M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1.3" fill="#0e5b62"/></svg></div><div><b style="font-size:13.5px;color:var(--ink);">Sense</b><div style="font-size:12px;color:var(--ink2);line-height:1.35;">Real-time freshness, eye or NFC</div></div></div>
+     <div style="display:flex;gap:11px;align-items:center;"><div style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:var(--tintp);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b3fa0" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5v1a4 4 0 0 0 0 8 4 4 0 0 0 5 4 4 4 0 0 0 5-4 4 4 0 0 0 0-8V7a5 5 0 0 0-5-5z"/></svg></div><div><b style="font-size:13.5px;color:var(--ink);">Predict</b><div style="font-size:12px;color:var(--ink2);line-height:1.35;">AI shelf-life &amp; expiry estimate</div></div></div>
+     <div style="display:flex;gap:11px;align-items:center;"><div style="flex-shrink:0;width:36px;height:36px;border-radius:9px;background:var(--tintb);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a2622b" stroke-width="2"><path d="M4 12a8 8 0 0 1 13-6M20 12a8 8 0 0 1-13 6"/><path d="M17 2v4h-4M7 22v-4h4"/></svg></div><div><b style="font-size:13.5px;color:var(--ink);">Sustain</b><div style="font-size:12px;color:var(--ink2);line-height:1.35;">Biodegradable &amp; reusable</div></div></div>
+    </div>
+   </div>
+   <div class="vstack grow">
+    <div class="card soft"><div class="eyebrow" style="color:var(--bronze);">Who it serves</div><ul class="clean tight" style="margin:0;"><li>Shrimp processors &amp; exporters</li><li>Retail &amp; cold-chain logistics</li><li>Food-safety regulators</li></ul></div>
+    <div class="card soft"><div class="eyebrow" style="color:var(--green);">How it earns</div><ul class="clean tight" style="margin:0;"><li>Packaging-film sales</li><li>Reusable-tag lease</li><li>SaaS freshness-AI subscription</li></ul></div>
+   </div>
+  </div>
+  <svg width="100%" viewBox="0 0 1180 60" style="flex:0 0 auto;">
+   <g font-size="12" fill="#21303a" font-weight="600">
+    <text x="70" y="50" text-anchor="middle">Shrimp packed</text><text x="292" y="50" text-anchor="middle">Film protects</text><text x="514" y="50" text-anchor="middle">Sensor detects</text><text x="736" y="50" text-anchor="middle">NFC → Cloud AI</text><text x="1000" y="50" text-anchor="middle">SAFE / CAUTION / UNSAFE</text>
+   </g>
+   <g stroke="#a2622b" stroke-width="1.6" fill="none" marker-end="url(#jr2)"><path d="M120 26 H240"/><path d="M342 26 H462"/><path d="M564 26 H684"/><path d="M800 26 H900"/></g>
+   <g fill="#0e5b62"><circle cx="70" cy="26" r="8"/><circle cx="292" cy="26" r="8"/><circle cx="514" cy="26" r="8"/><circle cx="736" cy="26" r="8"/></g><circle cx="1000" cy="26" r="8" fill="#2f7d52"/>
+   <defs><marker id="jr2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7Z" fill="#a2622b"/></marker></defs>
+  </svg>
+ </div>
+</section>
+
+<!-- 12 Q&A -->
+<section class="slide title">
+ <img src="file:///Users/virajvekariya/Desktop/deck_imgs/p01_x23_1256x1256.png" style="width:115px;height:115px;object-fit:contain;margin-bottom:10px;"/>
+ <h1 style="font-size:50px;">Thank You</h1>
+ <div class="sub" style="font-size:21px;margin-top:9px;">Questions &amp; Discussion</div>
+ <div class="team" style="margin-top:18px;">SensoPack — Smart Packaging · Real-Time Freshness · Safer Seafood · Better Tomorrow<br><span style="color:var(--ink3);">Team Sentinel · IIT Kharagpur Platinum Jubilee Innovation Challenge</span></div>
+</section>
+
+</div>
+<div class="nav"><button onclick="go(-1)">←</button><div class="counter" id="counter">1 / 12</div><button onclick="go(1)">→</button></div>
+<script>
+const slides=document.querySelectorAll('.slide');const total=slides.length;let cur=0;
+function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===cur));document.getElementById('counter').textContent=(cur+1)+' / '+total;document.getElementById('progress').style.width=(((cur+1)/total)*100)+'%';}
+function go(d){cur=Math.max(0,Math.min(total-1,cur+d));render();}
+document.addEventListener('keydown',e=>{if(['ArrowRight','ArrowDown',' '].includes(e.key))go(1);if(['ArrowLeft','ArrowUp'].includes(e.key))go(-1);});
+render();
+</script>
+</body>
+</html>
