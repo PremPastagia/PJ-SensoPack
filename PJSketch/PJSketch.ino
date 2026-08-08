@@ -97,8 +97,8 @@ void sendReadings() {
   float ammonia_ppm = readAmmoniaPpm();
 
   // ── Read AHT20 temperature and humidity ──
-  float temperature = 4.0;   // Default safe chilling temp
-  float humidity    = 85.0;  // Default humidity
+  float temperature = 25.0;  // Default room temperature (°C)
+  float humidity    = 60.0;  // Default room humidity (% RH)
 
   if (USE_AHT20 && ahtConnected) {
     sensors_event_t humidity_event, temp_event;
@@ -107,7 +107,7 @@ void sendReadings() {
     temperature = temp_event.temperature;
     humidity    = humidity_event.relative_humidity;
   } else if (USE_AHT20 && !ahtConnected) {
-    // Serial.println("# ERROR: AHT20 not connected, using defaults");
+    // AHT20 error fallback to room temperature (25°C) and RH (60%)
   }
 
   // Clamp values to valid ranges expected by the ML model

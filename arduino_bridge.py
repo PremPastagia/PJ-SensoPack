@@ -61,13 +61,65 @@ except Exception as e:
     print("Make sure it is plugged in, the port is correct, and the Arduino IDE Serial Monitor is CLOSED.")
     sys.exit(1)
 
+# Room default fallbacks if hardware sensors fail or report ERROR
+DEFAULT_ROOM_TEMP = float(os.environ.get('DEFAULT_ROOM_TEMP', 25.0))
+DEFAULT_ROOM_HUMIDITY = float(os.environ.get('DEFAULT_ROOM_HUMIDITY', 60.0))
+
+def parse_sensor_reading(line):
+    temp = DEFAULT_ROOM_TEMP
+    humidity = DEFAULT_ROOM_HUMIDITY
+    ammonia_ppm = 2.0
+    valid = False
+
+    # 1. Try JSON parsing
+    try:
+        payload = json.loads(line)
+        if isinstance(payload, dict):
+            t_val = payload.get("temp")
+            h_val = payload.get("humidity")
+            a_val = payload.get("ammonia_ppm") or payload.get("mq_raw")
+
+            if t_val is not None and str(t_val).upper() != "ERROR":
+                temp = float(t_val)
+            if h_val is not None and str(h_val).upper() != "ERROR":
+                humidity = float(h_val)
+            if a_val is not None and str(a_val).upper() != "ERROR":
+                val = float(a_val)
+                ammonia_ppm = (val / 1023.0 * 30.0) if val > 30 else val
+
+            return temp, humidity, round(ammonia_ppm, 2), True
+    except Exception:
+        pass
+
+    # 2. Try Tabular parsing (e.g., '15s  ERROR  ERROR  283')
+    parts = line.split()
+    if len(parts) >= 4 and (parts[0].endswith('s') or parts[0].isdigit()):
+        t_str, h_str, a_str = parts[1], parts[2], parts[3]
+
+        if t_str.upper() != "ERROR":
+            try: temp = float(t_str)
+            except ValueError: pass
+        
+        if h_str.upper() != "ERROR":
+            try: humidity = float(h_str)
+            except ValueError: pass
+
+        if a_str.upper() != "ERROR":
+            try:
+                val = float(a_str)
+                ammonia_ppm = (val / 1023.0 * 30.0) if val > 30 else val
+            except ValueError: pass
+
+        return temp, humidity, round(ammonia_ppm, 2), True
+
+    return None, None, None, False
+
 # 3. Read loop
 print("Bridge is active. Press Ctrl+C to stop.")
-print("Waiting for data...")
+print(f"Fallback active: Room Temp = {DEFAULT_ROOM_TEMP}°C, Room Humidity = {DEFAULT_ROOM_HUMIDITY}%\n")
 
 try:
     while True:
-        # Request data (SensoPack protocol expects 'R')
         try:
             ser.write(b'R')
         except Exception as e:
@@ -75,40 +127,31 @@ try:
             time.sleep(2)
             continue
         
-        # Read response and protect against decoding errors or corrupt lines
         try:
             raw_line = ser.readline()
             line = raw_line.decode('utf-8', errors='ignore').strip()
         except Exception as e:
-            print(f"Error reading/decoding serial data: {e}")
+            print(f"Error reading serial: {e}")
             continue
         
-        if line and not line.startswith('#'):
-            try:
-                # Expected JSON: {"temp": 25.0, "humidity": 60.0, "ammonia_ppm": 4.8}
-                payload = json.loads(line)
+        if line and not line.startswith('#') and not line.startswith('TIME') and not line.startswith('---') and not line.startswith('SensoPack'):
+            temp, humidity, ammonia_ppm, ok = parse_sensor_reading(line)
+            if ok:
+                data = {
+                    "temp_c": temp,
+                    "humidity": humidity,
+                    "ammonia_ppm": ammonia_ppm,
+                    "timestamp": time.time()
+                }
 
-                if "temp" in payload and "humidity" in payload and "ammonia_ppm" in payload:
-                    temp = float(payload["temp"])
-                    humidity = float(payload["humidity"])
-                    ammonia_ppm = float(payload["ammonia_ppm"])
-
-                    data = {
-                        "temp_c": temp,
-                        "humidity": humidity,
-                        "ammonia_ppm": ammonia_ppm,
-                        "timestamp": time.time()
-                    }
-
-                    # Push to Firebase
-                    ref.set(data)
-                    print(f"[Pushed to Cloud] Temp: {temp}°C | Humidity: {humidity}% | Ammonia: {ammonia_ppm} ppm")
-            except json.JSONDecodeError:
-                print(f"Error decoding JSON from line: '{line}'")
-            except Exception as e:
-                print(f"Unexpected error parsing line: '{line}' - {e}")
+                # Push to Firebase
+                ref.set(data)
+                print(f"[Pushed to Cloud] Temp: {temp}°C | Humidity: {humidity}% | Ammonia: {ammonia_ppm} ppm")
+            else:
+                if not line.startswith('Checking') and not line.startswith('->') and not line.startswith('Starting'):
+                    print(f"[Serial Received]: {line}")
                 
-        time.sleep(2) # Poll every 2 seconds
+        time.sleep(2)
 
 except KeyboardInterrupt:
     print("\nBridge stopped by user.")
