@@ -22,10 +22,10 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 
 try:
-    from rf_model import predict_proba
+    from rf_model import score as predict_proba
 except ImportError:
     try:
-        from api.rf_model import predict_proba
+        from api.rf_model import score as predict_proba
     except ImportError as e:
         print(f"Model Import Error: {e}")
         predict_proba = None
@@ -77,7 +77,14 @@ def predict(req: PredictRequest):
             temp = req.temp
             humidity = req.humidity
             ammonia_ppm = req.ammonia_ppm
-            sensor_data_used = {"temp_c": temp, "humidity": humidity, "ammonia_ppm": ammonia_ppm}
+            sensor_data_used = {
+                "temp_c": temp,
+                "humidity": humidity,
+                "ammonia_ppm": ammonia_ppm,
+                "temp_source": "sandbox",
+                "humidity_source": "sandbox",
+                "ammonia_source": "sandbox"
+            }
         else:
             if not firebase_initialized:
                 raise HTTPException(status_code=500, detail="Firebase not configured")
@@ -89,8 +96,19 @@ def predict(req: PredictRequest):
                 raise HTTPException(status_code=400, detail="Missing sensor data.")
             temp = float(sensor_data['temp_c'])
             humidity = float(sensor_data['humidity'])
-            ammonia_ppm = float(sensor_data.get('ammonia_ppm', req.ammonia_ppm))
-            sensor_data_used = {"temp_c": temp, "humidity": humidity, "ammonia_ppm": ammonia_ppm}
+            
+            # Ammonia is always sourced from the manual slider for upload/scan mode
+            ammonia_ppm = req.ammonia_ppm
+            ammonia_source = "manual"
+                
+            sensor_data_used = {
+                "temp_c": temp,
+                "humidity": humidity,
+                "ammonia_ppm": ammonia_ppm,
+                "temp_source": "sensor",
+                "humidity_source": "sensor",
+                "ammonia_source": ammonia_source
+            }
 
         time_exposed = req.time_exposed_hours
         ph_level = req.ph_level
@@ -107,7 +125,6 @@ def predict(req: PredictRequest):
                 "spoilage_probability": 0.99,
                 "reason": "Critical biological threshold breached.",
                 "sensor_data_used": sensor_data_used,
-                "recommended_action": "Product shows spoilage markers. Discard immediately.",
                 "confidence_scores": {
                     "SAFE": 0.0,
                     "CAUTION": 0.01,
@@ -115,11 +132,8 @@ def predict(req: PredictRequest):
                 }
             }
 
-        # 3. FEATURE ENGINEERING
-        degree_hours = temp * time_exposed
-
-        # Features matching train_rf.py: ['temp', 'humidity', 'ammonia_ppm', 'time_exposed_hours', 'ph_level', 'degree_hours']
-        features = [temp, humidity, ammonia_ppm, time_exposed, ph_level, degree_hours]
+        # Features matching V1 model: ["ammonia_ppm", "ph_level", "temperature_c", "storage_time_hrs", "humidity_pct"]
+        features = [ammonia_ppm, ph_level, temp, time_exposed, humidity]
         
         # 4. ML INFERENCE
         probs = predict_proba(features)
@@ -131,20 +145,16 @@ def predict(req: PredictRequest):
         max_prob = max(safe_score, caution_score, unsafe_score)
         if max_prob == unsafe_score:
             status = "UNSAFE"
-            action = "Product shows spoilage markers. Discard immediately."
         elif max_prob == caution_score:
             status = "CAUTION"
-            action = "Product is nearing spoilage threshold. Consume immediately or verify manually."
         else:
             status = "SAFE"
-            action = "Product is within safe freshness bounds."
 
         return {
             "prediction": status,
             "status": "Spoiled" if status == "UNSAFE" else ("Caution" if status == "CAUTION" else "Fresh"),
             "spoilage_probability": round(unsafe_score, 4),
             "sensor_data_used": sensor_data_used,
-            "recommended_action": action,
             "confidence_scores": {
                 "SAFE": safe_score,
                 "CAUTION": caution_score,
