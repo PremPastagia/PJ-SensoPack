@@ -71,7 +71,6 @@ const dom = {
   barSafe:        document.getElementById("bar-safe"),
   barCaution:     document.getElementById("bar-caution"),
   barUnsafe:      document.getElementById("bar-unsafe"),
-  recAction:      document.getElementById("recommended-action"),
 
   // Main layout
   mainView:       document.getElementById("main-view"),
@@ -309,10 +308,6 @@ const UIManager = {
         if (dom.btnSimulate) {
           dom.btnSimulate.style.display = isSandbox ? "block" : "none";
         }
-        
-        if (lastScanData) {
-          executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs).catch(console.error);
-        }
       });
     }
 
@@ -320,7 +315,7 @@ const UIManager = {
       dom.btnSimulate.addEventListener("click", () => {
         // Create dummy objects to satisfy executeScanPayload and keep QR fields "empty/placeholder"
         const dummyQrResult = { 
-          data: { batch_id: "—", product_id: "—", packaging_time: null, initial_temp_c: dom.slTemp.value }, 
+          data: { batch_id: "—", product_id: "—", packaging_time: null, initial_temp_c: undefined }, 
           location: null 
         };
         const dummyBiofilmResult = { 
@@ -341,15 +336,6 @@ const UIManager = {
         valDisplay.textContent = `${val} ${suffix}`;
         const percent = (val - slider.min) / (slider.max - slider.min);
         slider.style.setProperty('--val', `${percent * 100}%`);
-      });
-      slider.addEventListener("change", (e) => {
-        if (lastScanData) {
-          executeScanPayload(lastScanData.qrResult, lastScanData.biofilmResult, lastScanData.storageHrs)
-            .catch(err => {
-              console.error("Re-prediction error:", err);
-              showError("Failed to update prediction with new sandbox level.");
-            });
-        }
       });
     };
 
@@ -551,7 +537,7 @@ function populateSummary(qr, biofilm, storageHrs, sensorData) {
   } else {
     dom.sumPacktime.textContent = "—";
   }
-  dom.sumInittemp.textContent = (d.initial_temp_c !== undefined) ? d.initial_temp_c + " °C" : "—";
+  dom.sumInittemp.textContent = (d.initial_temp_c !== undefined && d.initial_temp_c !== null && d.initial_temp_c !== "—") ? d.initial_temp_c + " °C" : "—";
 
   // Visual Analysis
   dom.sumStorage.textContent = storageHrs.toFixed(1) + " hrs";
@@ -568,9 +554,24 @@ function populateSummary(qr, biofilm, storageHrs, sensorData) {
 
   // Cloud Sensor Data
   if (sensorData) {
-    dom.sumAmmonia.textContent = sensorData.ammonia_ppm ? sensorData.ammonia_ppm.toFixed(1) + " ppm" : "—";
-    dom.sumTemp.textContent = sensorData.temp_c.toFixed(1) + " °C";
-    dom.sumHumidity.textContent = sensorData.humidity ? sensorData.humidity.toFixed(0) + " %" : "—";
+    dom.sumAmmonia.textContent = (sensorData.ammonia_ppm !== undefined && sensorData.ammonia_ppm !== null) ? sensorData.ammonia_ppm.toFixed(1) + " ppm" : "—";
+    dom.sumTemp.textContent = (sensorData.temp_c !== undefined && sensorData.temp_c !== null) ? sensorData.temp_c.toFixed(1) + " °C" : "—";
+    dom.sumHumidity.textContent = (sensorData.humidity !== undefined && sensorData.humidity !== null) ? sensorData.humidity.toFixed(0) + " %" : "—";
+    
+    // Update data source labels dynamically from backend metadata
+    const subAmmonia = document.getElementById("sub-ammonia");
+    const subTemp = document.getElementById("sub-temp");
+    const subHumidity = document.getElementById("sub-humidity");
+    
+    const sourceMap = {
+      "sandbox": "From sandbox mode",
+      "sensor": "From sensor data",
+      "manual": "From manual slider"
+    };
+    
+    if (subAmmonia) subAmmonia.textContent = sourceMap[sensorData.ammonia_source] || "From manual slider";
+    if (subTemp) subTemp.textContent = sourceMap[sensorData.temp_source] || "From sensor data";
+    if (subHumidity) subHumidity.textContent = sourceMap[sensorData.humidity_source] || "From sensor data";
   }
 }
 
@@ -581,8 +582,6 @@ function renderResult(result) {
   dom.statusBadge.className = "status-badge " + config.css;
   dom.statusIcon.textContent = config.icon;
   dom.statusLabel.textContent = result.prediction;
-  
-  dom.recAction.textContent = result.recommended_action || "—";
 
   const scores = result.confidence_scores;
   updateBar(dom.barSafe, dom.confSafe, scores.SAFE);

@@ -174,7 +174,7 @@
           <div class="data-value" id="sum-biofilm">—</div>
           <div class="data-sub" id="sum-biofilm-detail">—</div>
         </div>
-        <div class="data-group">
+        <div class="data-group" style="border-top: 1px solid #e2e8f0; padding-top: 1rem;">
           <div class="data-label">Estimated pH</div>
           <div class="data-value" id="sum-ph">—</div>
           <div class="data-sub" id="sum-ph-detail">—</div>
@@ -182,17 +182,17 @@
         <div class="data-group">
           <div class="data-label">AMMONIA (LIVE)</div>
           <div class="data-value" id="sum-ammonia">—</div>
-          <div class="data-sub">From manual slider</div>
+          <div class="data-sub" id="sub-ammonia">From manual slider</div>
         </div>
         <div class="data-group">
           <div class="data-label">Temperature (Live)</div>
           <div class="data-value" id="sum-temp">—</div>
-          <div class="data-sub">From sensor data</div>
+          <div class="data-sub" id="sub-temp">From sensor data</div>
         </div>
         <div class="data-group">
           <div class="data-label">Humidity (Live)</div>
           <div class="data-value" id="sum-humidity">—</div>
-          <div class="data-sub">From sensor data</div>
+          <div class="data-sub" id="sub-humidity">From sensor data</div>
         </div>
       </div>
     </div>
@@ -223,9 +223,7 @@
         </div>
       </div>
 
-      <div class="recommendation">
-        <strong>Recommendation:</strong> <span id="recommended-action">—</span>
-      </div>
+
       
       <button class="btn btn-secondary" style="margin-top: 2rem; width: auto; padding: 10px 24px;" onclick="resetScanner()">Scan Another Package</button>
     </div>
