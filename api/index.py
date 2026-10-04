@@ -136,13 +136,13 @@ def predict(req: PredictRequest):
             }
         else:
             if not firebase_initialized:
-                raise HTTPException(status_code=500, detail="Firebase not configured")
+                raise HTTPException(status_code=500, detail="Firebase not initialized. Provide FIREBASE_CREDENTIALS or serviceAccountKey.json.")
             ref = db.reference('sensor_state')
             sensor_data = ref.get()
             if not sensor_data:
-                raise HTTPException(status_code=404, detail="No sensor data in Firebase.")
+                raise HTTPException(status_code=404, detail="No live sensor data found in Firebase. Ensure arduino_bridge.py is running with Arduino connected, or enable Sandbox Mode.")
             if 'temp_c' not in sensor_data or 'humidity' not in sensor_data:
-                raise HTTPException(status_code=400, detail="Missing sensor data.")
+                raise HTTPException(status_code=400, detail="Incomplete sensor data in Firebase (missing temp_c or humidity). Check Arduino wiring.")
             temp = float(sensor_data['temp_c'])
             humidity = float(sensor_data['humidity'])
             
